@@ -1,0 +1,32 @@
+<%- include('../layouts/admin_header') %>
+
+<h2>Products</h2>
+<a href="/admin/products/create" class="btn btn-primary mb-3">Add New Product</a>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Price</th>
+            <th>Specs (RAM/Disk/CPU)</th>
+            <th>Egg/Nest</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        <% products.forEach(product => { %>
+            <tr>
+                <td><%= product.name %></td>
+                <td>Rp <%= product.price %></td>
+                <td><%= product.memory %>MB / <%= product.disk %>MB / <%= product.cpu %>%</td>
+                <td><%= product.nest_id %> / <%= product.egg_id %></td>
+                <td>
+                    <!-- Add edit/delete buttons later if needed -->
+                    <button class="btn btn-sm btn-danger">Delete</button>
+                </td>
+            </tr>
+        <% }) %>
+    </tbody>
+</table>
+
+<%- include('../layouts/admin_footer') %>
