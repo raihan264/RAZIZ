@@ -158,6 +158,19 @@ if ($action === 'get_all') {
             'Active' // Initial status
         ]);
 
+        $serverId = $pdo->lastInsertId();
+
+        // 10. Create Order Record
+        $sqlOrder = "INSERT INTO orders (user_id, product_id, server_id, status, amount) VALUES (?, ?, ?, ?, ?)";
+        $stmtOrder = $pdo->prepare($sqlOrder);
+        $stmtOrder->execute([
+            $customer['id'],
+            $product['id'],
+            $serverId,
+            'Active',
+            $product['price']
+        ]);
+
         // Update customer active servers count
         $pdo->prepare("UPDATE customers SET activeServers = activeServers + 1 WHERE id = ?")->execute([$customer['id']]);
 
@@ -204,6 +217,9 @@ if ($action === 'get_all') {
 
             // 4. Delete from Local DB
             $pdo->prepare("DELETE FROM servers WHERE id = ?")->execute([$id]);
+
+            // 5. Update Order Status to Expired
+            $pdo->prepare("UPDATE orders SET status = 'Expired' WHERE server_id = ?")->execute([$id]);
 
             echo json_encode(['success' => true, 'message' => 'Server berhasil dihapus']);
         } else {

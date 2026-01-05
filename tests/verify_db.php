@@ -5,7 +5,7 @@ require_once __DIR__ . '/../config/database.php';
 echo "Verifying database tables...\n";
 
 // Tables to check
-$tables = ['products', 'customers', 'settings', 'servers'];
+$tables = ['products', 'customers', 'settings', 'servers', 'orders'];
 
 foreach ($tables as $table) {
     try {

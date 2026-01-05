@@ -154,11 +154,7 @@
         let panelUsers = [];
 
         // Orders still mocked as requested (only Server/Setting management required)
-        let orders = [
-            { id: "#ORD-001", user: "Riyan Gaming", plan: "Pro Gaming - 4 GB", date: "10 Mar 2024", status: "Active", amount: "Rp 8.000" },
-            { id: "#ORD-002", user: "Santoso Store", plan: "Hemat - 1 GB", date: "09 Mar 2024", status: "Active", amount: "Rp 3.000" },
-            { id: "#ORD-003", user: "Budi Santuy", plan: "Starter - 2 GB", date: "09 Mar 2024", status: "Expired", amount: "Rp 5.000" }
-        ];
+        let orders = [];
 
         // --- APP SETTINGS DATA ---
         let appSettings = {
@@ -291,6 +287,7 @@
             } else if (tab === 'orders') {
                 titleEl.textContent = 'Data Pesanan';
                 html = getOrdersHTML();
+                loadOrders(); // Load dynamically
             } else if (tab === 'users') {
                 titleEl.textContent = 'Pelanggan Terdaftar';
                 html = getUsersHTML();
@@ -458,11 +455,28 @@
         function getOrdersHTML() {
             return `
             <div class="space-y-6 animate-fade-in">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-2xl font-bold text-white">Semua Pesanan</h2>
-                    <button onclick="openModal('order', 'add')" class="bg-green-600 hover:bg-green-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 active:scale-95 transition-all">
-                        <i data-lucide="plus" class="w-4 h-4"></i> Input Pesanan
-                    </button>
+                <!-- Header with Filter & Report -->
+                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 mb-6">
+                    <div class="flex flex-wrap items-end gap-4">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Dari Tanggal</label>
+                            <input type="date" id="filter-start" class="bg-gray-950 border border-gray-800 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-green-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Sampai Tanggal</label>
+                            <input type="date" id="filter-end" class="bg-gray-950 border border-gray-800 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-green-500">
+                        </div>
+                        <button onclick="loadOrders()" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            <i data-lucide="filter" class="w-4 h-4 inline mr-1"></i> Filter
+                        </button>
+                        <div class="flex-1"></div>
+                        <button onclick="printReport('pdf')" class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            <i data-lucide="printer" class="w-4 h-4 inline mr-1"></i> PDF
+                        </button>
+                        <button onclick="exportReport('excel')" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            <i data-lucide="file-spreadsheet" class="w-4 h-4 inline mr-1"></i> Excel
+                        </button>
+                    </div>
                 </div>
 
                 <div class="bg-gray-900 border border-gray-800 rounded-3xl overflow-hidden shadow-xl">
@@ -475,25 +489,12 @@
                                     <th class="px-6 py-5">Paket</th>
                                     <th class="px-6 py-5">Tanggal</th>
                                     <th class="px-6 py-5">Status</th>
+                                    <th class="px-6 py-5">Harga</th>
                                     <th class="px-6 py-5 text-right">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-800">
-                                ${orders.map(o => `
-                                <tr class="hover:bg-gray-800/20 transition-colors">
-                                    <td class="px-6 py-5 font-mono text-xs">${o.id}</td>
-                                    <td class="px-6 py-5 text-white font-medium">${o.user}</td>
-                                    <td class="px-6 py-5 text-xs">${o.plan}</td>
-                                    <td class="px-6 py-5 text-xs text-gray-500">${o.date}</td>
-                                    <td class="px-6 py-5">${renderStatusBadge(o.status)}</td>
-                                    <td class="px-6 py-5">
-                                        <div class="flex justify-end gap-2">
-                                            <button onclick='openModal("order", "edit", ${JSON.stringify(o)})' class="p-2 bg-gray-800 hover:bg-green-500/20 text-gray-400 hover:text-green-500 rounded-lg"><i data-lucide="edit" class="w-4 h-4"></i></button>
-                                            <button onclick="deleteItem('order', '${o.id}')" class="p-2 bg-gray-800 hover:bg-red-500/20 text-gray-400 hover:text-red-500 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                `).join('')}
+                            <tbody class="divide-y divide-gray-800" id="orders-tbody">
+                                <tr><td colspan="7" class="text-center py-6"><i class="animate-spin" data-lucide="loader"></i> Memuat...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -881,6 +882,58 @@
             }
         }
 
+        function loadOrders() {
+            const start = document.getElementById('filter-start') ? document.getElementById('filter-start').value : '';
+            const end = document.getElementById('filter-end') ? document.getElementById('filter-end').value : '';
+
+            fetch(`actions/order_handler.php?action=get_all&start_date=${start}&end_date=${end}`)
+                .then(res => res.json())
+                .then(data => {
+                    if(data.success) {
+                        orders = data.orders;
+                        const tbody = document.getElementById('orders-tbody');
+                        if (!tbody) return;
+
+                        if (orders.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-5 text-center text-gray-500">Tidak ada pesanan.</td></tr>';
+                            return;
+                        }
+
+                        tbody.innerHTML = orders.map(o => `
+                            <tr class="hover:bg-gray-800/20 transition-colors">
+                                <td class="px-6 py-5 font-mono text-xs">${o.id}</td>
+                                <td class="px-6 py-5 text-white font-medium">${o.user}</td>
+                                <td class="px-6 py-5 text-xs">${o.plan}</td>
+                                <td class="px-6 py-5 text-xs text-gray-500">${o.date}</td>
+                                <td class="px-6 py-5">${renderStatusBadge(o.status)}</td>
+                                <td class="px-6 py-5 font-bold text-white">${o.amount}</td>
+                                <td class="px-6 py-5">
+                                    <div class="flex justify-end gap-2">
+                                        <button onclick="deleteItem('order', '${o.id}')" class="p-2 bg-gray-800 hover:bg-red-500/20 text-gray-400 hover:text-red-500 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('');
+                        lucide.createIcons();
+                    } else {
+                        console.error(data.message);
+                    }
+                })
+                .catch(err => console.error(err));
+        }
+
+        function printReport(type) {
+            const start = document.getElementById('filter-start').value;
+            const end = document.getElementById('filter-end').value;
+            window.open(`actions/order_handler.php?action=print_view&start_date=${start}&end_date=${end}`, '_blank');
+        }
+
+        function exportReport(type) {
+            const start = document.getElementById('filter-start').value;
+            const end = document.getElementById('filter-end').value;
+            window.location.href = `actions/order_handler.php?action=export_csv&start_date=${start}&end_date=${end}`;
+        }
+
         function loadPanelUsers() {
             fetch('actions/panel_user_handler.php?action=get_all')
                 .then(res => res.json())
@@ -956,8 +1009,20 @@
                 })
                 .catch(err => console.error(err));
             } else if (type === 'order') {
-                orders = orders.filter(o => o.id !== id);
-                renderView(currentTab);
+                fetch('actions/order_handler.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ action: 'delete', id: id })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.success) {
+                        loadOrders();
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(err => console.error(err));
             } else if (type === 'server') {
                 const svr = servers.find(s => s.id === id);
                 const dbId = svr ? svr.raw_id : id.replace('SVR-', '');

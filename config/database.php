@@ -84,6 +84,23 @@ try {
         )
     ");
 
+    // Auto-create table orders
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            product_id INTEGER,
+            server_id INTEGER,
+            status TEXT DEFAULT 'Active',
+            amount TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES customers(id),
+            FOREIGN KEY (product_id) REFERENCES products(id),
+            FOREIGN KEY (server_id) REFERENCES servers(id)
+        )
+    ");
+
 } catch (PDOException $e) {
     die("Koneksi database gagal: " . $e->getMessage());
 }
