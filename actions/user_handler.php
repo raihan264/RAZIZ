@@ -8,7 +8,15 @@ $action = $_REQUEST['action'] ?? '';
 
 if ($action === 'get_all') {
     try {
-        $stmt = $pdo->query("SELECT id, name, username, wa, activeServers, joinDate FROM customers ORDER BY created_at DESC");
+        // Count active servers dynamically
+        $sql = "
+            SELECT c.id, c.name, c.username, c.wa, c.joinDate, COUNT(s.id) as activeServers
+            FROM customers c
+            LEFT JOIN servers s ON c.id = s.user_id
+            GROUP BY c.id
+            ORDER BY c.created_at DESC
+        ";
+        $stmt = $pdo->query($sql);
         $customers = $stmt->fetchAll();
         echo json_encode(['success' => true, 'customers' => $customers]);
     } catch (PDOException $e) {

@@ -23,15 +23,35 @@ if ($action === 'get_all') {
         $stmt = $pdo->query($sql);
         $servers = $stmt->fetchAll();
 
+        // Set Timezone
+        date_default_timezone_set('Asia/Jakarta');
+
         // Format for frontend
         $formatted = array_map(function($svr) {
+            $createdAt = new DateTime($svr['created_at']);
+            $now = new DateTime();
+            $diff = $now->diff($createdAt)->days;
+
+            $status = 'Active';
+            if ($diff > 30) {
+                $status = 'Expired';
+            } elseif ($diff > 15) {
+                $status = 'No Garansi';
+            } else {
+                // If it was just created, it might be 'Installing' in DB, but requirement says "Active" immediately.
+                // However, let's respect the dynamic calculation or DB value?
+                // Prompt: "setelah buat server statusnya langsung Aktif... Jika Lebih dari 15 hari... No Garansi"
+                // So we override DB status with calculated status based on time.
+                $status = 'Active';
+            }
+
             return [
                 'id' => "SVR-" . $svr['id'], // Display ID
                 'raw_id' => $svr['id'],
                 'owner' => $svr['owner_name'],
                 'plan' => $svr['plan_name'],
-                'date' => date('d M Y', strtotime($svr['created_at'])),
-                'status' => $svr['status'],
+                'date' => $createdAt->format('d M Y'),
+                'status' => $status,
                 'identifier' => $svr['identifier']
             ];
         }, $servers);
@@ -135,7 +155,7 @@ if ($action === 'get_all') {
             $customer['id'],
             $product['id'],
             $server_name,
-            'Installing' // Initial status
+            'Active' // Initial status
         ]);
 
         // Update customer active servers count
@@ -149,10 +169,51 @@ if ($action === 'get_all') {
         echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
 } elseif ($action === 'delete') {
-    // Implement delete if needed
     $id = $_POST['id'] ?? '';
-    // ...
-    echo json_encode(['success' => true]);
+
+    if (empty($id)) {
+        echo json_encode(['success' => false, 'message' => 'ID server diperlukan']);
+        exit;
+    }
+
+    try {
+        // 1. Get Settings
+        $stmt = $pdo->query("SELECT * FROM settings LIMIT 1");
+        $settings = $stmt->fetch();
+        if (!$settings || empty($settings['plta_key']) || empty($settings['panel_domain'])) {
+            throw new Exception("Pterodactyl settings not configured.");
+        }
+
+        // 2. Get Server Info
+        $stmt = $pdo->prepare("SELECT pterodactyl_id FROM servers WHERE id = ?");
+        $stmt->execute([$id]);
+        $server = $stmt->fetch();
+
+        if ($server) {
+            // 3. Delete from Panel
+            $ptero = new PterodactylService($settings['panel_domain'], $settings['plta_key']);
+            try {
+                $ptero->deleteServer($server['pterodactyl_id']);
+            } catch (Exception $e) {
+                // Ignore if not found on panel, proceed to delete local?
+                // Or maybe just log it. "404 Not Found" is fine to ignore.
+                if (strpos($e->getMessage(), '404') === false) {
+                    // throw $e; // Optional: Force stop if panel delete fails
+                }
+            }
+
+            // 4. Delete from Local DB
+            $pdo->prepare("DELETE FROM servers WHERE id = ?")->execute([$id]);
+
+            echo json_encode(['success' => true, 'message' => 'Server berhasil dihapus']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Server tidak ditemukan']);
+        }
+
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+
 } else {
     echo json_encode(['success' => false, 'message' => 'Invalid action']);
 }

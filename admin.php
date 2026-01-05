@@ -632,11 +632,18 @@
         }
 
         function renderStatusBadge(status) {
-            const colorClass = status === 'Active' || status === 'Online'
-                ? 'bg-green-500/10 text-green-500 border-green-500/20'
-                : (status === 'Installing'
-                    ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-                    : 'bg-red-500/10 text-red-500 border-red-500/20');
+            let colorClass = '';
+            if (status === 'Active' || status === 'Online') {
+                colorClass = 'bg-green-500/10 text-green-500 border-green-500/20';
+            } else if (status === 'No Garansi') {
+                colorClass = 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+            } else if (status === 'Expired') {
+                colorClass = 'bg-red-500/10 text-red-500 border-red-500/20';
+            } else if (status === 'Installing') {
+                colorClass = 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+            } else {
+                colorClass = 'bg-gray-500/10 text-gray-500 border-gray-500/20';
+            }
             return `<span class="px-2.5 py-1 rounded-full text-xs font-medium border ${colorClass}">${status}</span>`;
         }
 
@@ -880,14 +887,33 @@
                 orders = orders.filter(o => o.id !== id);
                 renderView(currentTab);
             } else if (type === 'server') {
-                // Implement delete server if backend supports it
-                // For now just remove from UI or call API if implemented
-                // servers = servers.filter(s => s.id !== id);
-                // renderView(currentTab);
+                const svr = servers.find(s => s.id === id);
+                const dbId = svr ? svr.raw_id : id.replace('SVR-', '');
 
-                // Since I haven't implemented DELETE fully in server_handler (it's a stub),
-                // I'll just show an alert or just remove from UI.
-                alert("Fitur hapus server belum diimplementasikan sepenuhnya.");
+                const btn = event.currentTarget; // The delete button
+                const originalContent = btn.innerHTML;
+                btn.innerHTML = '<i class="animate-spin" data-lucide="loader" class="w-4 h-4"></i>';
+                lucide.createIcons();
+
+                fetch('actions/server_handler.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ action: 'delete', id: dbId })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.success) {
+                        loadInitialData(); // Reloads servers and customer counts
+                    } else {
+                        alert('Gagal: ' + data.message);
+                        btn.innerHTML = originalContent;
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('Terjadi kesalahan koneksi.');
+                    btn.innerHTML = originalContent;
+                });
             }
         }
 

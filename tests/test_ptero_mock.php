@@ -45,6 +45,10 @@ class MockPterodactylService extends PterodactylService {
         if ($endpoint === '/servers' && $method === 'POST') {
             return ['attributes' => ['id' => 101, 'identifier' => 'srv-101']];
         }
+        if (strpos($endpoint, '/servers/') !== false && $method === 'DELETE') {
+            echo "Server Deleted!\n";
+            return []; // 204 No Content usually, or empty body
+        }
         return [];
     }
 
@@ -93,4 +97,7 @@ $server = $service->createServer([
 ], $egg['environment'], $alloc);
 
 print_r($server);
+
+echo "Deleting Server (ID 101)...\n";
+$service->deleteServer(101);
 ?>

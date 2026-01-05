@@ -157,5 +157,9 @@ class PterodactylService {
             'environment' => $env
         ];
     }
+
+    public function deleteServer($serverId) {
+        return $this->request('DELETE', "/servers/{$serverId}");
+    }
 }
 ?>
