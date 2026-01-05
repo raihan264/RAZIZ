@@ -161,5 +161,14 @@ class PterodactylService {
     public function deleteServer($serverId) {
         return $this->request('DELETE', "/servers/{$serverId}");
     }
+
+    public function getUsers() {
+        // Fetch users including servers relation to count them
+        return $this->request('GET', '/users?include=servers');
+    }
+
+    public function deleteUser($userId) {
+        return $this->request('DELETE', "/users/{$userId}");
+    }
 }
 ?>

@@ -49,6 +49,30 @@ class MockPterodactylService extends PterodactylService {
             echo "Server Deleted!\n";
             return []; // 204 No Content usually, or empty body
         }
+        if ($endpoint === '/users?include=servers') {
+            return [
+                'data' => [
+                    [
+                        'object' => 'user',
+                        'attributes' => [
+                            'id' => 1, 'username' => 'admin', 'email' => 'admin@test.com',
+                            'relationships' => ['servers' => ['data' => []]]
+                        ]
+                    ],
+                    [
+                        'object' => 'user',
+                        'attributes' => [
+                            'id' => 2, 'username' => 'user_with_server', 'email' => 'user@test.com',
+                            'relationships' => ['servers' => ['data' => [['attributes' => ['id' => 101]]]]]
+                        ]
+                    ]
+                ]
+            ];
+        }
+        if (strpos($endpoint, '/users/') !== false && $method === 'DELETE') {
+            echo "User Deleted!\n";
+            return [];
+        }
         return [];
     }
 
@@ -100,4 +124,11 @@ print_r($server);
 
 echo "Deleting Server (ID 101)...\n";
 $service->deleteServer(101);
+
+echo "Listing Users...\n";
+$users = $service->getUsers();
+echo "Found " . count($users['data']) . " users.\n";
+
+echo "Deleting User...\n";
+$service->deleteUser(1);
 ?>

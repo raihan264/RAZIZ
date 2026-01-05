@@ -151,6 +151,7 @@
         let products = [];
         let customers = [];
         let servers = [];
+        let panelUsers = [];
 
         // Orders still mocked as requested (only Server/Setting management required)
         let orders = [
@@ -240,6 +241,7 @@
                 { id: 'products', label: 'Produk / Paket', icon: 'shopping-bag' },
                 { id: 'orders', label: 'Pesanan', icon: 'shopping-cart' },
                 { id: 'users', label: 'Pelanggan', icon: 'users' },
+                { id: 'panel_users', label: 'User Panel', icon: 'user-check' },
                 { id: 'settings', label: 'Pengaturan', icon: 'settings', spacer: true }
             ];
 
@@ -292,6 +294,10 @@
             } else if (tab === 'users') {
                 titleEl.textContent = 'Pelanggan Terdaftar';
                 html = getUsersHTML();
+            } else if (tab === 'panel_users') {
+                titleEl.textContent = 'User Panel Pterodactyl';
+                html = getPanelUsersHTML();
+                loadPanelUsers();
             } else if (tab === 'settings') {
                 titleEl.textContent = 'Pengaturan Toko';
                 html = getSettingsHTML();
@@ -488,6 +494,36 @@
                                     </td>
                                 </tr>
                                 `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function getPanelUsersHTML() {
+            return `
+            <div class="space-y-6 animate-fade-in">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-white">Daftar Akun Panel</h2>
+                    <!-- No Add Button as per request -->
+                </div>
+
+                <div class="bg-gray-900 border border-gray-800 rounded-3xl overflow-hidden shadow-2xl">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-400">
+                            <thead class="bg-gray-950/50 text-gray-500 uppercase text-xs font-bold">
+                                <tr>
+                                    <th class="px-6 py-5">ID</th>
+                                    <th class="px-6 py-5">Username</th>
+                                    <th class="px-6 py-5">Email</th>
+                                    <th class="px-6 py-5">Created At</th>
+                                    <th class="px-6 py-5">Server Count</th>
+                                    <th class="px-6 py-5 text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-800" id="panel-users-tbody">
+                                <tr><td colspan="6" class="px-6 py-5 text-center"><i class="animate-spin" data-lucide="loader"></i> Memuat...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -845,6 +881,42 @@
             }
         }
 
+        function loadPanelUsers() {
+            fetch('actions/panel_user_handler.php?action=get_all')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        panelUsers = data.users;
+                        const tbody = document.getElementById('panel-users-tbody');
+                        if (!tbody) return;
+
+                        if (panelUsers.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-5 text-center text-gray-500">Tidak ada user panel.</td></tr>';
+                            return;
+                        }
+
+                        tbody.innerHTML = panelUsers.map(u => `
+                            <tr class="hover:bg-gray-800/20 transition-colors">
+                                <td class="px-6 py-5 font-mono text-xs text-gray-500">${u.id}</td>
+                                <td class="px-6 py-5 font-bold text-white">${u.username}</td>
+                                <td class="px-6 py-5 text-xs text-gray-400">${u.email}</td>
+                                <td class="px-6 py-5 text-xs text-gray-500">${u.created_at}</td>
+                                <td class="px-6 py-5"><span class="bg-gray-800 px-3 py-1 rounded-lg text-xs font-bold text-white">${u.server_count}</span></td>
+                                <td class="px-6 py-5">
+                                    <div class="flex justify-end gap-2">
+                                        <button onclick="deleteItem('panel_user', ${u.id})" class="p-2.5 bg-gray-800 hover:bg-red-500/20 text-gray-400 hover:text-red-500 rounded-xl transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('');
+                        lucide.createIcons();
+                    } else {
+                        console.error(data.message);
+                    }
+                })
+                .catch(err => console.error(err));
+        }
+
         function deleteItem(type, id) {
             if(!confirm('Yakin ingin menghapus data ini?')) return;
 
@@ -906,6 +978,32 @@
                         loadInitialData(); // Reloads servers and customer counts
                     } else {
                         alert('Gagal: ' + data.message);
+                        btn.innerHTML = originalContent;
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('Terjadi kesalahan koneksi.');
+                    btn.innerHTML = originalContent;
+                });
+            } else if (type === 'panel_user') {
+                const btn = event.currentTarget;
+                const originalContent = btn.innerHTML;
+                btn.innerHTML = '<i class="animate-spin" data-lucide="loader" class="w-4 h-4"></i>';
+                lucide.createIcons();
+
+                fetch('actions/panel_user_handler.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ action: 'delete', id: id })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.success) {
+                        alert(data.message);
+                        loadPanelUsers();
+                    } else {
+                        alert(data.message);
                         btn.innerHTML = originalContent;
                     }
                 })
