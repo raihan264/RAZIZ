@@ -899,6 +899,14 @@
             .then(res => res.json())
             .then(data => {
                 if(data.success) {
+                    // Update global state so re-renders show new data
+                    appSettings.panelDomain = domain;
+                    appSettings.panelPLTA = plta;
+                    appSettings.panelPLTC = pltc;
+                    appSettings.contactEmail = email;
+                    appSettings.contactWA = wa;
+                    appSettings.contactAddress = address;
+
                     btn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> Berhasil Disimpan';
                     btn.classList.replace('bg-green-600', 'bg-emerald-500');
                     lucide.createIcons();
