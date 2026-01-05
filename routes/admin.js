@@ -52,6 +52,62 @@ router.get('/users', async (req, res) => {
 
 const pteroService = require('../services/ptero');
 
+const pteroConfig = require('../config/ptero');
+
+// Server Management
+router.get('/server/create', async (req, res) => {
+    const users = await User.findAll();
+    const products = await Product.findAll();
+    res.render('admin/server_create', { users, products });
+});
+
+router.post('/server/create', async (req, res) => {
+    try {
+        const { user_id, product_id } = req.body;
+        const user = await User.findByPk(user_id);
+        const product = await Product.findByPk(product_id);
+
+        if (!user || !product) {
+            return res.status(404).send('User or Product not found');
+        }
+
+        // 1. Check/Create Ptero User
+        // Use the new naming convention logic in PteroService
+        const pteroEmail = `${user.username}@${pteroConfig.EMAIL_DOMAIN}`;
+        let pteroUser = await pteroService.getPteroUser(pteroEmail);
+
+        if (!pteroUser) {
+            // If not found by constructed email, try checking by local email just in case?
+            // The requirement says "email buat username+raziz.my.id", so we stick to that.
+            // If the user already exists with that email, getPteroUser returns it.
+            // If not, create it.
+            pteroUser = await pteroService.createPteroUser(user);
+        }
+
+        // 2. Create Ptero Server
+        const server = await pteroService.createServer(pteroUser.id, product);
+
+        // 3. Create Local Order Record (Active)
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 30); // Default 30 days
+
+        await Order.create({
+            user_id: user.id,
+            product_id: product.id,
+            status: 'active',
+            ptero_server_id: server.id,
+            ptero_identifier: server.uuid,
+            expires_at: expiresAt
+        });
+
+        res.redirect('/admin/orders'); // Redirect to orders list to see the new server
+
+    } catch (error) {
+        console.error('Create Server Error:', error);
+        res.status(500).send('Error creating server: ' + error.message);
+    }
+});
+
 // Orders
 router.get('/orders', async (req, res) => {
     const orders = await Order.findAll({
