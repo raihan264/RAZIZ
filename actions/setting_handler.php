@@ -1,6 +1,7 @@
 <?php
 // actions/setting_handler.php
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../services/PterodactylService.php';
 
 header('Content-Type: application/json');
 
@@ -54,6 +55,34 @@ if ($action === 'get') {
     } catch (PDOException $e) {
         echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
+
+} elseif ($action === 'test_connection') {
+    try {
+        $stmt = $pdo->query("SELECT * FROM settings LIMIT 1");
+        $settings = $stmt->fetch();
+
+        if (!$settings || empty($settings['plta_key']) || empty($settings['panel_domain'])) {
+            throw new Exception("Domain dan API Key belum disimpan.");
+        }
+
+        $ptero = new PterodactylService($settings['panel_domain'], $settings['plta_key']);
+
+        // Try to fetch users (limit 1) to test auth
+        // We need to access a protected method or add a public test method to Service.
+        // Actually, checkUserExists calls request(), which is protected.
+        // We can expose a public 'ping' method in service, or just call checkUserExists with a dummy.
+        // Let's modify Service to have a ping or generic request helper if possible?
+        // Or just use checkUserExists('random_check_123'). If it returns null (not found) or ID, auth works.
+        // If it throws exception, auth failed.
+
+        $ptero->checkUserExists('random_ping_check');
+
+        echo json_encode(['success' => true, 'message' => 'Koneksi ke Panel Berhasil!']);
+
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'message' => 'Koneksi Gagal: ' . $e->getMessage()]);
+    }
+
 } else {
     echo json_encode(['success' => false, 'message' => 'Invalid action']);
 }

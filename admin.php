@@ -595,6 +595,9 @@
 
                 <!-- Actions -->
                 <div class="flex justify-end gap-4">
+                    <button onclick="testConnection()" class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-bold transition-all shadow-lg shadow-blue-600/20 flex items-center gap-2">
+                        <i data-lucide="wifi" class="w-5 h-5"></i> Test Koneksi
+                    </button>
                     <button onclick="saveAllSettings()" class="bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-2xl font-bold transition-all shadow-lg shadow-green-600/20 flex items-center gap-2">
                         <i data-lucide="save" class="w-5 h-5"></i> Simpan Perubahan
                     </button>
@@ -755,25 +758,36 @@
                     alert('Terjadi kesalahan saat menyimpan produk');
                 });
             } else if (currentModalType === 'user') {
-                // Keep local array update for demo, or better, make it real:
-                // For now, I'll just mock the update in UI or implement a real user save if requested.
-                // The prompt said "Admin chooses Pelanggan and Produk", it didn't explicitly demand full User CRUD to DB.
-                // But I should update the "customers" array if I want the dropdowns to reflect it.
-                // For simplicity as per instructions (focus on Server Mgmt), I will leave User CRUD as JS array manipulation
-                // BUT "customers" array is now loaded from DB. So JS array manipulation won't save to DB.
-                // Since user didn't ask for full user management rewrite, I'll leave the UI effect but it won't persist on reload
-                // unless I implement user_handler 'add'.
+                const action = currentModalMode === 'add' ? 'add' : 'edit';
+                const requestData = new URLSearchParams();
+                requestData.append('action', action);
 
-                // Let's implement minimal 'add' for user so the flow is complete for the user experience?
-                // No, sticking to instructions "focus on server management and settings".
-                // I will just update the local list so the dropdown works immediately.
-                if (currentModalMode === 'add') {
-                    customers.push({ id: Date.now(), ...data, joinDate: 'Hari ini', activeServers: 0 });
-                } else {
-                    customers = customers.map(c => c.id === currentEditId ? { ...c, ...data } : c);
+                if (action === 'edit') {
+                    requestData.append('id', currentEditId);
                 }
-                closeModal();
-                renderView(currentTab);
+
+                for (const [key, value] of Object.entries(data)) {
+                    requestData.append(key, value);
+                }
+
+                fetch('actions/user_handler.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: requestData
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        loadInitialData(); // Reload users from DB
+                        closeModal();
+                    } else {
+                        alert('Error: ' + result.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Terjadi kesalahan saat menyimpan user');
+                });
             } else if (currentModalType === 'order') {
                 if (currentModalMode === 'add') {
                     orders.unshift({ id: `#ORD-${Math.floor(Math.random()*1000)}`, ...data, date: 'Baru saja' });
@@ -851,8 +865,17 @@
                     alert('Terjadi kesalahan saat menghapus produk');
                 });
             } else if (type === 'user') {
-                customers = customers.filter(c => c.id !== id);
-                renderView(currentTab);
+                fetch('actions/user_handler.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ action: 'delete', id: id })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.success) loadInitialData();
+                    else alert(data.message);
+                })
+                .catch(err => console.error(err));
             } else if (type === 'order') {
                 orders = orders.filter(o => o.id !== id);
                 renderView(currentTab);
@@ -866,6 +889,30 @@
                 // I'll just show an alert or just remove from UI.
                 alert("Fitur hapus server belum diimplementasikan sepenuhnya.");
             }
+        }
+
+        function testConnection() {
+            const btn = event.currentTarget;
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="animate-spin" data-lucide="loader"></i> Testing...';
+            lucide.createIcons();
+
+            fetch('actions/setting_handler.php?action=test_connection')
+                .then(res => res.json())
+                .then(data => {
+                    btn.innerHTML = originalHTML;
+                    lucide.createIcons();
+                    if(data.success) {
+                        alert('SUKSES: ' + data.message);
+                    } else {
+                        alert('GAGAL: ' + data.message);
+                    }
+                })
+                .catch(err => {
+                    btn.innerHTML = originalHTML;
+                    lucide.createIcons();
+                    alert('Error: ' + err);
+                });
         }
 
         function saveAllSettings() {
