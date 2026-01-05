@@ -20,9 +20,15 @@ try {
             $stmt = $pdo->query("SELECT * FROM products ORDER BY id DESC");
             $products = $stmt->fetchAll();
 
+            // Format price for display
+            $formatted_products = array_map(function($p) {
+                $p['price'] = number_format($p['price'], 0, ',', '.');
+                return $p;
+            }, $products);
+
             echo json_encode([
                 'success' => true,
-                'products' => $products
+                'products' => $formatted_products
             ]);
             break;
 
@@ -34,6 +40,7 @@ try {
             $product = $stmt->fetch();
 
             if ($product) {
+                $product['price'] = number_format($product['price'], 0, ',', '.');
                 echo json_encode([
                     'success' => true,
                     'product' => $product
@@ -54,6 +61,9 @@ try {
             $disk = $_POST['disk'] ?? '';
             $stock = $_POST['stock'] ?? '';
             $price = $_POST['price'] ?? '';
+
+            // Sanitize price: remove non-digits (e.g. "3.000" -> "3000")
+            $price = preg_replace('/[^0-9]/', '', $price);
 
             // Validasi input
             if (empty($name) || empty($cpu) || empty($ram) || empty($disk) || empty($stock) || empty($price)) {
@@ -95,6 +105,9 @@ try {
             $disk = $_POST['disk'] ?? '';
             $stock = $_POST['stock'] ?? '';
             $price = $_POST['price'] ?? '';
+
+            // Sanitize price
+            $price = preg_replace('/[^0-9]/', '', $price);
 
             // Validasi input
             if (empty($id) || empty($name) || empty($cpu) || empty($ram) || empty($disk) || empty($stock) || empty($price)) {

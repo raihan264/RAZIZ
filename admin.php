@@ -209,10 +209,29 @@
                 .then(data => { if(data.success && data.settings) appSettings = data.settings; })
                 .catch(err => console.error(err));
 
+            // Load Dashboard Stats
+            loadDashboardStats();
+
             // Load dashboard initially
             setTimeout(() => {
                 if(currentTab === 'dashboard') renderView('dashboard');
             }, 500);
+        }
+
+        function loadDashboardStats() {
+            fetch('actions/dashboard_handler.php?action=get_stats')
+                .then(res => res.json())
+                .then(data => {
+                    if(data.success && data.stats) {
+                        const s = data.stats;
+                        if(document.getElementById('stat-revenue')) document.getElementById('stat-revenue').textContent = s.revenue;
+                        if(document.getElementById('stat-percent')) document.getElementById('stat-percent').textContent = s.percentage;
+                        if(document.getElementById('stat-servers')) document.getElementById('stat-servers').textContent = s.servers;
+                        if(document.getElementById('stat-users')) document.getElementById('stat-users').textContent = s.users;
+                        if(document.getElementById('stat-products')) document.getElementById('stat-products').textContent = s.products;
+                    }
+                })
+                .catch(err => console.error(err));
         }
 
         // --- UI FUNCTIONS ---
@@ -310,10 +329,10 @@
             return `
             <div class="space-y-6 animate-fade-in">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    ${renderStatCard('Total Pendapatan', 'Rp 15.450.000', '+12.5%', 'dollar-sign', 'green')}
-                    ${renderStatCard('Server Aktif', servers.length, 'Aktual', 'activity', 'blue')}
-                    ${renderStatCard('Total User', customers.length, 'Aktual', 'users', 'purple')}
-                    ${renderStatCard('Total Produk', products.length, 'Aktual', 'shopping-bag', 'yellow')}
+                    ${renderStatCard('Total Pendapatan', '<span id="stat-revenue">Rp 0</span>', '<span id="stat-percent">0%</span>', 'dollar-sign', 'green')}
+                    ${renderStatCard('Server Aktif', '<span id="stat-servers">0</span>', 'Aktual', 'activity', 'blue')}
+                    ${renderStatCard('Total User', '<span id="stat-users">0</span>', 'Aktual', 'users', 'purple')}
+                    ${renderStatCard('Total Produk', '<span id="stat-products">0</span>', 'Aktual', 'shopping-bag', 'yellow')}
                 </div>
 
                 <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden shadow-xl">
@@ -822,6 +841,7 @@
                 .then(response => response.json())
                 .then(result => {
                     if (result.success) {
+                        alert('Server berhasil dibuat!');
                         loadInitialData(); // Reload users from DB
                         closeModal();
                     } else {
