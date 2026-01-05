@@ -566,10 +566,10 @@
                     <div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 hover:border-green-500/30 transition-all group">
                         <div class="flex items-center gap-4 mb-6">
                             <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-green-600 to-emerald-600 flex items-center justify-center text-xl font-bold text-white shadow-lg">
-                                ${u.name ? u.name.charAt(0) : '?'}
+                                ${u.username ? u.username.charAt(0).toUpperCase() : '?'}
                             </div>
                             <div class="flex-1 overflow-hidden">
-                                <h3 class="text-lg font-bold text-white group-hover:text-green-400 transition-colors truncate">${u.name}</h3>
+                                <h3 class="text-lg font-bold text-white group-hover:text-green-400 transition-colors truncate">${u.username}</h3>
                                 <p class="text-[10px] text-gray-500 uppercase tracking-tighter">Gabung ${u.joinDate}</p>
                             </div>
                             <div class="flex gap-1">
@@ -766,7 +766,6 @@
                 </select></div>`;
             } else if (type === 'user') {
                 html = `
-                <div><label class="block text-sm text-gray-400 mb-2 font-medium">Nama Lengkap</label><input name="name" value="${data.name || ''}" required class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500" placeholder="Nama Lengkap"></div>
                 <div class="grid grid-cols-2 gap-4">
                     <div><label class="block text-sm text-gray-400 mb-2 font-medium">Username</label><input name="username" value="${data.username || ''}" required class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500" placeholder="Username"></div>
                     <div><label class="block text-sm text-gray-400 mb-2 font-medium">Password</label><input name="password" value="${data.password || ''}" required type="text" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500" placeholder="Password"></div>

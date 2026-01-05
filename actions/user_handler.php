@@ -23,13 +23,12 @@ if ($action === 'get_all') {
         echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
 } elseif ($action === 'add') {
-    $name = $_POST['name'] ?? '';
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
     $wa = $_POST['wa'] ?? '';
 
-    if (empty($name) || empty($username) || empty($password)) {
-        echo json_encode(['success' => false, 'message' => 'Nama, Username, dan Password wajib diisi']);
+    if (empty($username) || empty($password)) {
+        echo json_encode(['success' => false, 'message' => 'Username dan Password wajib diisi']);
         exit;
     }
 
@@ -43,9 +42,10 @@ if ($action === 'get_all') {
         }
 
         $joinDate = date('d M Y');
+        // Use username as name to satisfy potential DB constraints
         $sql = "INSERT INTO customers (name, username, password, wa, joinDate, activeServers) VALUES (?, ?, ?, ?, ?, 0)";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([$name, $username, $password, $wa, $joinDate]);
+        $stmt->execute([$username, $username, $password, $wa, $joinDate]);
 
         echo json_encode(['success' => true, 'message' => 'Pelanggan berhasil ditambahkan']);
     } catch (PDOException $e) {
@@ -54,12 +54,11 @@ if ($action === 'get_all') {
 
 } elseif ($action === 'edit') {
     $id = $_POST['id'] ?? '';
-    $name = $_POST['name'] ?? '';
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
     $wa = $_POST['wa'] ?? '';
 
-    if (empty($id) || empty($name) || empty($username) || empty($password)) {
+    if (empty($id) || empty($username) || empty($password)) {
         echo json_encode(['success' => false, 'message' => 'Data tidak lengkap']);
         exit;
     }
@@ -73,9 +72,10 @@ if ($action === 'get_all') {
             exit;
         }
 
+        // Use username as name
         $sql = "UPDATE customers SET name = ?, username = ?, password = ?, wa = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([$name, $username, $password, $wa, $id]);
+        $stmt->execute([$username, $username, $password, $wa, $id]);
 
         echo json_encode(['success' => true, 'message' => 'Data pelanggan diperbarui']);
     } catch (PDOException $e) {

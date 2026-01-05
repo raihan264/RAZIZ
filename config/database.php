@@ -39,10 +39,12 @@ try {
     ");
 
     // Auto-create table customers jika belum ada
+    // Note: Schema changed to remove 'name' but we keep it for backward compat if table exists.
+    // New installs won't have 'name'.
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS customers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
+            name TEXT,
             username TEXT NOT NULL UNIQUE,
             password TEXT NOT NULL,
             wa TEXT NOT NULL,
