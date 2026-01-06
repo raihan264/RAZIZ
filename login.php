@@ -1,3 +1,14 @@
+<?php
+session_start();
+if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in']) {
+    header("Location: admin.php");
+    exit;
+}
+if (isset($_SESSION['user_logged_in']) && $_SESSION['user_logged_in']) {
+    header("Location: member.php");
+    exit;
+}
+?>
 <!DOCTYPE html>
 <html lang="id">
 <head>

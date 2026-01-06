@@ -9,11 +9,11 @@ $action = $_REQUEST['action'] ?? '';
 if ($action === 'get_stats') {
     try {
         // 1. Total Revenue
-        $stmt = $pdo->query("SELECT SUM(amount) FROM orders WHERE status = 'Active'");
+        // Use CAST to ensure text column 'amount' is treated as number
+        $stmt = $pdo->query("SELECT SUM(CAST(amount AS INTEGER)) FROM orders WHERE status = 'Active'");
         $total_revenue = $stmt->fetchColumn() ?: 0;
 
         // 2. Active Servers (Count all in table)
-        // User asked for "Total Server Aktif" matching management server list.
         $stmt = $pdo->query("SELECT COUNT(*) FROM servers");
         $active_servers = $stmt->fetchColumn() ?: 0;
 
@@ -27,11 +27,11 @@ if ($action === 'get_stats') {
 
         // 5. Weekly Percentage (Revenue)
         // This Week: Last 7 days
-        $stmt = $pdo->query("SELECT SUM(amount) FROM orders WHERE status = 'Active' AND created_at >= date('now', '-7 days')");
+        $stmt = $pdo->query("SELECT SUM(CAST(amount AS INTEGER)) FROM orders WHERE status = 'Active' AND created_at >= date('now', '-7 days')");
         $revenue_this_week = $stmt->fetchColumn() ?: 0;
 
         // Last Week: 7-14 days ago
-        $stmt = $pdo->query("SELECT SUM(amount) FROM orders WHERE status = 'Active' AND created_at BETWEEN date('now', '-14 days') AND date('now', '-7 days')");
+        $stmt = $pdo->query("SELECT SUM(CAST(amount AS INTEGER)) FROM orders WHERE status = 'Active' AND created_at BETWEEN date('now', '-14 days') AND date('now', '-7 days')");
         $revenue_last_week = $stmt->fetchColumn() ?: 0;
 
         $percentage = 0;

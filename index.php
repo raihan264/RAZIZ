@@ -99,7 +99,7 @@ foreach ($plans as $k => $v) {
                         </a>
                         <?php if(isset($_SESSION['user_logged_in'])): ?>
                         <a href="member.php" class="bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-500 hover:to-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-green-500/25">
-                            Member Area
+                            Dashboard
                         </a>
                         <?php else: ?>
                         <a href="login.php" class="bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-500 hover:to-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-green-500/25">
