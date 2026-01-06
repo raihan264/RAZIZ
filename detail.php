@@ -1,4 +1,5 @@
 <?php
+session_start();
 require_once 'config/database.php';
 
 // Get Product ID
@@ -48,6 +49,10 @@ $message = "Halo RAZIZ PANEL, saya ingin membeli paket " . $selectedPlan['name']
            "- RAM: " . $selectedPlan['ram'] . PHP_EOL .
            "- Disk: " . $selectedPlan['disk'];
 $waUrl = "https://wa.me/" . $contactWa . "?text=" . urlencode($message);
+
+// Check if user is logged in
+$isLoggedIn = isset($_SESSION['user_logged_in']);
+$purchaseLink = $isLoggedIn ? $waUrl : "login.php?redirect=detail.php?id=" . $id;
 
 ?>
 <!DOCTYPE html>
@@ -391,10 +396,10 @@ $waUrl = "https://wa.me/" . $contactWa . "?text=" . urlencode($message);
 
                 <!-- CTA Button -->
                 <div class="space-y-4">
-                    <a href="<?php echo $waUrl; ?>" target="_blank"
+                    <a href="<?php echo $purchaseLink; ?>" target="<?php echo $isLoggedIn ? '_blank' : '_self'; ?>"
                        class="w-full bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-500 hover:to-emerald-600 text-white font-bold py-4 px-6 rounded-2xl shadow-xl hover:shadow-green-500/25 flex items-center justify-center gap-3 transition-all duration-300 transform hover:-translate-y-1 active:scale-95 text-lg">
-                        <i data-lucide="message-circle" class="w-5 h-5"></i>
-                        Pesan Sekarang via WhatsApp
+                        <i data-lucide="<?php echo $isLoggedIn ? 'message-circle' : 'log-in'; ?>" class="w-5 h-5"></i>
+                        <?php echo $isLoggedIn ? 'Pesan Sekarang via WhatsApp' : 'Login untuk Membeli'; ?>
                     </a>
 
                     <p class="text-center text-gray-500 text-sm">

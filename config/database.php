@@ -103,6 +103,16 @@ try {
         )
     ");
 
+    // Auto-create table admins
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS admins (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            password TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+
 } catch (PDOException $e) {
     die("Koneksi database gagal: " . $e->getMessage());
 }

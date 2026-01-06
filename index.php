@@ -1,4 +1,5 @@
 <?php
+session_start();
 require_once 'config/database.php';
 
 // Fetch Products
@@ -96,9 +97,15 @@ foreach ($plans as $k => $v) {
                             Harga
                             <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-green-500 group-hover:w-full transition-all duration-300"></span>
                         </a>
+                        <?php if(isset($_SESSION['user_logged_in'])): ?>
+                        <a href="member.php" class="bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-500 hover:to-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-green-500/25">
+                            Member Area
+                        </a>
+                        <?php else: ?>
                         <a href="login.php" class="bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-500 hover:to-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-green-500/25">
                             Masuk
                         </a>
+                        <?php endif; ?>
                     </div>
                 </div>
 
