@@ -206,7 +206,18 @@
             // Load Settings
             fetch('actions/setting_handler.php?action=get')
                 .then(res => res.json())
-                .then(data => { if(data.success && data.settings) appSettings = data.settings; })
+                .then(data => {
+                    if(data.success && data.settings) {
+                        const s = data.settings;
+                        // Map snake_case from DB to camelCase for frontend
+                        appSettings.panelDomain = s.panel_domain || '';
+                        appSettings.panelPLTA = s.plta_key || '';
+                        appSettings.panelPLTC = s.pltc_key || '';
+                        appSettings.contactEmail = s.contact_email || '';
+                        appSettings.contactWA = s.contact_wa || '';
+                        appSettings.contactAddress = s.contact_address || '';
+                    }
+                })
                 .catch(err => console.error(err));
 
             // Load Dashboard Stats
