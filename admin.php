@@ -227,9 +227,6 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
                 })
                 .catch(err => console.error(err));
 
-            // Load Dashboard Stats
-            loadDashboardStats();
-
             // Load dashboard initially
             setTimeout(() => {
                 if(currentTab === 'dashboard') renderView('dashboard');
@@ -315,6 +312,7 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
             if (tab === 'dashboard') {
                 titleEl.textContent = 'Dashboard';
                 html = getDashboardHTML();
+                setTimeout(loadDashboardStats, 100); // Wait for DOM
             } else if (tab === 'servers') {
                 titleEl.textContent = 'Manajemen Server';
                 html = getServersHTML();
