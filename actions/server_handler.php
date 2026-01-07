@@ -32,21 +32,16 @@ if ($action === 'get_all') {
             $now = new DateTime();
             $diff = $now->diff($createdAt)->days;
 
+            // Status Logic
             $status = 'Active';
             if ($diff > 30) {
                 $status = 'Expired';
             } elseif ($diff > 15) {
                 $status = 'No Garansi';
-            } else {
-                // If it was just created, it might be 'Installing' in DB, but requirement says "Active" immediately.
-                // However, let's respect the dynamic calculation or DB value?
-                // Prompt: "setelah buat server statusnya langsung Aktif... Jika Lebih dari 15 hari... No Garansi"
-                // So we override DB status with calculated status based on time.
-                $status = 'Active';
             }
 
             return [
-                'id' => "SVR-" . $svr['id'], // Display ID
+                'id' => "SVR-" . $svr['id'],
                 'raw_id' => $svr['id'],
                 'owner' => $svr['owner_name'],
                 'plan' => $svr['plan_name'],
@@ -61,9 +56,9 @@ if ($action === 'get_all') {
         echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
 } elseif ($action === 'create') {
-    $owner_name = $_POST['owner'] ?? ''; // Received as Name from frontend select value
-    $plan_name = $_POST['plan'] ?? '';   // Received as Name
-    $server_name = $_POST['server_name'] ?? ''; // New field
+    $owner_name = $_POST['owner'] ?? '';
+    $plan_name = $_POST['plan'] ?? '';
+    $server_name = $_POST['server_name'] ?? '';
 
     if (empty($owner_name) || empty($plan_name) || empty($server_name)) {
         echo json_encode(['success' => false, 'message' => 'Missing required fields']);
@@ -78,13 +73,13 @@ if ($action === 'get_all') {
             throw new Exception("Pterodactyl settings (Domain/API Key) not configured.");
         }
 
-        // 2. Resolve Customer ID and Details
+        // 2. Resolve Customer
         $stmt = $pdo->prepare("SELECT * FROM customers WHERE name = ? LIMIT 1");
         $stmt->execute([$owner_name]);
         $customer = $stmt->fetch();
         if (!$customer) throw new Exception("Customer not found: $owner_name");
 
-        // 3. Resolve Product ID and Specs
+        // 3. Resolve Product
         $stmt = $pdo->prepare("SELECT * FROM products WHERE name = ? LIMIT 1");
         $stmt->execute([$plan_name]);
         $product = $stmt->fetch();
@@ -94,18 +89,19 @@ if ($action === 'get_all') {
         $ptero = new PterodactylService($settings['panel_domain'], $settings['plta_key']);
 
         // 5. Check/Create Pterodactyl User
-        // Use username to check. Assuming local username matches panel username logic.
-        // Prompt said: "email = username+@raziz.my.id"
+        // Use username to check.
         $pteroUserId = $ptero->checkUserExists($customer['username']);
 
         if (!$pteroUserId) {
             // Create User
+            // Rule: email = username + '@raziz.my.id'
+            // Rule: first_name, last_name = username (or last name static 'User')
             $userData = [
                 'username' => $customer['username'],
                 'email' => $customer['username'] . '@raziz.my.id',
                 'first_name' => $customer['username'],
                 'last_name' => 'User',
-                'password' => $customer['password'] // Using local password
+                'password' => $customer['password'] // Sync password
             ];
             $pteroUserId = $ptero->createUser($userData);
         }
@@ -113,37 +109,37 @@ if ($action === 'get_all') {
         // 6. Get Egg Details (Nest 5, Egg 15)
         $nestId = 5;
         $eggId = 15;
-        $eggDetails = $ptero->getEggDetails($nestId, $eggId); // Fetch Env Vars
+        $eggDetails = $ptero->getEggDetails($nestId, $eggId);
 
         // 7. Get Allocation (Node 1)
         $nodeId = 1;
         $allocationId = $ptero->getUnassignedAllocation($nodeId);
 
-        // 8. Create Server
+        // 8. Prepare Server Payload
+        // Parse RAM/Disk from Product (Assuming DB stores e.g. "4" for 4GB, or "4096" for MB.
+        // Based on assumption, products table has small integers like '1', '3'. Treating as GB.
+
+        $ramRaw = (int) filter_var($product['ram'], FILTER_SANITIZE_NUMBER_INT);
+        $diskRaw = (int) filter_var($product['disk'], FILTER_SANITIZE_NUMBER_INT);
+        $cpuRaw = (int) filter_var($product['cpu'], FILTER_SANITIZE_NUMBER_INT);
+
+        // Convert GB to MB if value is small (arbitrary threshold < 128 likely GB)
+        // Or simply multiply by 1024 as per requirement for "1", "3".
+        $ramMB = $ramRaw < 128 ? $ramRaw * 1024 : $ramRaw;
+        $diskMB = $diskRaw < 128 ? $diskRaw * 1024 : $diskRaw;
+
         $serverPayload = [
             'name' => $server_name,
             'user_id' => $pteroUserId,
             'egg_id' => $eggId,
             'docker_image' => $eggDetails['docker_image'],
             'startup' => $eggDetails['startup'],
-            'memory' => (int) filter_var($product['ram'], FILTER_SANITIZE_NUMBER_INT), // Assuming "4 GB" -> 4. Wait, usually MB.
-            'disk' => (int) filter_var($product['disk'], FILTER_SANITIZE_NUMBER_INT), // Assuming "5 GB" -> 5
-            'cpu' => (int) filter_var($product['cpu'], FILTER_SANITIZE_NUMBER_INT)
+            'memory' => $ramMB,
+            'disk' => $diskMB,
+            'cpu' => $cpuRaw
         ];
 
-        // Parse RAM/Disk to MB if needed.
-        // Example: "4 GB" -> 4096. "128 MB" -> 128.
-        // Simple parser:
-        function parseToMB($str) {
-            $num = (int) filter_var($str, FILTER_SANITIZE_NUMBER_INT);
-            if (stripos($str, 'GB') !== false) return $num * 1024;
-            return $num; // Assume MB if not GB
-        }
-
-        $serverPayload['memory'] = parseToMB($product['ram']);
-        $serverPayload['disk'] = parseToMB($product['disk']);
-        $serverPayload['cpu'] = (int) filter_var($product['cpu'], FILTER_SANITIZE_NUMBER_INT);
-
+        // Create on Pterodactyl
         $pteroServer = $ptero->createServer($serverPayload, $eggDetails['environment'], $allocationId);
 
         // 9. Save to Local DB
@@ -155,13 +151,13 @@ if ($action === 'get_all') {
             $customer['id'],
             $product['id'],
             $server_name,
-            'Active' // Initial status
+            'Active'
         ]);
 
         $serverId = $pdo->lastInsertId();
 
-        // 10. Create Order Record
-        $sqlOrder = "INSERT INTO orders (user_id, product_id, server_id, status, amount) VALUES (?, ?, ?, ?, ?)";
+        // 10. Create Order Record (Automated)
+        $sqlOrder = "INSERT INTO orders (user_id, product_id, server_id, status, amount, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
         $stmtOrder = $pdo->prepare($sqlOrder);
         $stmtOrder->execute([
             $customer['id'],
@@ -177,7 +173,6 @@ if ($action === 'get_all') {
         echo json_encode(['success' => true, 'message' => 'Server created successfully']);
 
     } catch (Exception $e) {
-        // Log detailed error for debugging if needed
         error_log($e->getMessage());
         echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
@@ -190,36 +185,35 @@ if ($action === 'get_all') {
     }
 
     try {
-        // 1. Get Settings
         $stmt = $pdo->query("SELECT * FROM settings LIMIT 1");
         $settings = $stmt->fetch();
         if (!$settings || empty($settings['plta_key']) || empty($settings['panel_domain'])) {
             throw new Exception("Pterodactyl settings not configured.");
         }
 
-        // 2. Get Server Info
-        $stmt = $pdo->prepare("SELECT pterodactyl_id FROM servers WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT pterodactyl_id, user_id FROM servers WHERE id = ?");
         $stmt->execute([$id]);
         $server = $stmt->fetch();
 
         if ($server) {
-            // 3. Delete from Panel
             $ptero = new PterodactylService($settings['panel_domain'], $settings['plta_key']);
             try {
                 $ptero->deleteServer($server['pterodactyl_id']);
             } catch (Exception $e) {
-                // Ignore if not found on panel, proceed to delete local?
-                // Or maybe just log it. "404 Not Found" is fine to ignore.
+                // Ignore 404
                 if (strpos($e->getMessage(), '404') === false) {
-                    // throw $e; // Optional: Force stop if panel delete fails
+                    // Log but continue?
                 }
             }
 
-            // 4. Delete from Local DB
+            // Delete Local
             $pdo->prepare("DELETE FROM servers WHERE id = ?")->execute([$id]);
 
-            // 5. Update Order Status to Expired
+            // Set Order Expired
             $pdo->prepare("UPDATE orders SET status = 'Expired' WHERE server_id = ?")->execute([$id]);
+
+            // Decrement active servers count
+            $pdo->prepare("UPDATE customers SET activeServers = MAX(0, activeServers - 1) WHERE id = ?")->execute([$server['user_id']]);
 
             echo json_encode(['success' => true, 'message' => 'Server berhasil dihapus']);
         } else {

@@ -7,6 +7,8 @@ class PterodactylService {
     private $clientKey;
 
     public function __construct($domain, $apiKey, $clientKey = null) {
+        // Strip protocols and slashes
+        $domain = preg_replace('#^https?://#', '', $domain);
         $this->domain = rtrim($domain, '/');
         $this->apiKey = $apiKey;
         $this->clientKey = $clientKey;
@@ -60,12 +62,13 @@ class PterodactylService {
     }
 
     public function createUser($data) {
+        // Ensure email and names are set correctly before calling
         $payload = [
             'username' => $data['username'],
             'email' => $data['email'],
             'first_name' => $data['first_name'],
             'last_name' => $data['last_name'],
-            'password' => $data['password'], // Pterodactyl might require password or handle it
+            'password' => $data['password'],
             'language' => 'en',
             'root_admin' => false,
         ];
@@ -74,22 +77,9 @@ class PterodactylService {
         return $response['attributes']['id'];
     }
 
-    public function getEggEnvironment($nestId, $eggId) {
-        $response = $this->request('GET', "/nests/{$nestId}/eggs/{$eggId}?include=variables");
-        $vars = [];
-
-        if (isset($response['attributes']['relationships']['variables']['data'])) {
-            foreach ($response['attributes']['relationships']['variables']['data'] as $var) {
-                $attr = $var['attributes'];
-                $vars[$attr['env_variable']] = $attr['default_value'];
-            }
-        }
-        return $vars;
-    }
-
     public function getUnassignedAllocation($nodeId) {
-        // Fetch allocations for the node
-        // Note: Pagination might be needed for many allocations, but for now we take the first page
+        // Fetch allocations for the node (Page 1)
+        // TODO: Add pagination loop if Node 1 has > 50 allocations and all are full on page 1
         $response = $this->request('GET', "/nodes/{$nodeId}/allocations?include=node");
 
         foreach ($response['data'] as $allocation) {
@@ -98,7 +88,27 @@ class PterodactylService {
             }
         }
 
-        throw new Exception("No available allocations found on Node $nodeId");
+        throw new Exception("No available allocations found on Node $nodeId (Page 1 checked).");
+    }
+
+    // Get full Egg Config (Env Vars, Startup, Docker Image)
+    public function getEggDetails($nestId, $eggId) {
+        $response = $this->request('GET', "/nests/{$nestId}/eggs/{$eggId}?include=variables");
+        $attr = $response['attributes'];
+
+        $env = [];
+        if (isset($attr['relationships']['variables']['data'])) {
+            foreach ($attr['relationships']['variables']['data'] as $var) {
+                $vAttr = $var['attributes'];
+                $env[$vAttr['env_variable']] = $vAttr['default_value'];
+            }
+        }
+
+        return [
+            'startup' => $attr['startup'],
+            'docker_image' => $attr['docker_image'],
+            'environment' => $env
+        ];
     }
 
     public function createServer($data, $envVars, $allocationId) {
@@ -125,37 +135,7 @@ class PterodactylService {
             ]
         ];
 
-        // If Egg details provided Docker Image/Startup, use them
-        // For now, we rely on the caller or fetch them.
-        // Enhancement: Fetch egg details includes docker_images and startup
-
-        // To be safe, let's re-fetch egg details strictly for startup/image if not passed
-        // But to keep it simple as per plan, we assume env vars are enough or defaults are OK.
-        // ACTUALLY: The prompt says "Get Egg Details first to get default variables".
-        // The egg details response usually contains 'docker_image' and 'startup'.
-
-        // Let's refine getEggEnvironment to return startup info too.
         return $this->request('POST', '/servers', $payload);
-    }
-
-    // Refined method to get full Egg Config
-    public function getEggDetails($nestId, $eggId) {
-        $response = $this->request('GET', "/nests/{$nestId}/eggs/{$eggId}?include=variables");
-        $attr = $response['attributes'];
-
-        $env = [];
-        if (isset($attr['relationships']['variables']['data'])) {
-            foreach ($attr['relationships']['variables']['data'] as $var) {
-                $vAttr = $var['attributes'];
-                $env[$vAttr['env_variable']] = $vAttr['default_value'];
-            }
-        }
-
-        return [
-            'startup' => $attr['startup'],
-            'docker_image' => $attr['docker_image'],
-            'environment' => $env
-        ];
     }
 
     public function deleteServer($serverId) {
@@ -163,7 +143,6 @@ class PterodactylService {
     }
 
     public function getUsers() {
-        // Fetch users including servers relation to count them
         return $this->request('GET', '/users?include=servers');
     }
 

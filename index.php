@@ -148,17 +148,17 @@ foreach ($plans as $k => $v) {
             <div class="text-center max-w-4xl mx-auto">
                 <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-900/30 border border-green-700/30 text-green-400 text-sm font-medium mb-6">
                     <i data-lucide="sparkles" class="w-4 h-4"></i>
-                    Hosting Server Terbaik untuk Gaming
+                    Hosting Terbaik untuk Bot WhatsApp
                 </span>
 
                 <h1 class="text-5xl sm:text-7xl lg:text-8xl font-black mb-6 leading-tight">
-                    <span class="text-white">Hosting Server</span>
+                    <span class="text-white">Hosting Bot</span>
                     <br>
-                    <span class="gradient-text">Tanpa Batas</span>
+                    <span class="gradient-text">WhatsApp</span>
                 </h1>
 
                 <p class="text-gray-400 text-xl mb-10 max-w-3xl mx-auto leading-relaxed">
-                    Dapatkan pengalaman gaming terbaik dengan server hosting berperforma tinggi.
+                    Jalankan bot WhatsApp Anda nonstop 24/7 dengan server hosting stabil dan cepat.
                     Mulai dari <span class="text-green-400 font-bold">Rp 3.000</span> saja per bulan.
                 </p>
 
@@ -277,24 +277,14 @@ foreach ($plans as $k => $v) {
                 </p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                <div class="p-8 glass-effect rounded-3xl border border-gray-800 hover:border-green-500/30 transition-all duration-300 group">
-                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                        <i data-lucide="shield-check" class="w-7 h-7 text-white"></i>
-                    </div>
-                    <h4 class="text-xl font-bold mb-3 text-white">Anti DDoS</h4>
-                    <p class="text-gray-400 leading-relaxed">
-                        Perlindungan maksimal dari serangan luar dengan sistem keamanan berlapis.
-                    </p>
-                </div>
-
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="p-8 glass-effect rounded-3xl border border-gray-800 hover:border-green-500/30 transition-all duration-300 group">
                     <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                         <i data-lucide="zap" class="w-7 h-7 text-white"></i>
                     </div>
                     <h4 class="text-xl font-bold mb-3 text-white">High Performance</h4>
                     <p class="text-gray-400 leading-relaxed">
-                        Menggunakan hardware terbaru dan jaringan cepat untuk pengalaman gaming optimal.
+                        Menggunakan hardware terbaru dan jaringan cepat untuk kinerja bot yang responsif.
                     </p>
                 </div>
 
@@ -304,17 +294,7 @@ foreach ($plans as $k => $v) {
                     </div>
                     <h4 class="text-xl font-bold mb-3 text-white">24/7 Support</h4>
                     <p class="text-gray-400 leading-relaxed">
-                        Tim support siap membantu Anda kapan saja melalui berbagai channel komunikasi.
-                    </p>
-                </div>
-
-                <div class="p-8 glass-effect rounded-3xl border border-gray-800 hover:border-green-500/30 transition-all duration-300 group">
-                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                        <i data-lucide="refresh-cw" class="w-7 h-7 text-white"></i>
-                    </div>
-                    <h4 class="text-xl font-bold mb-3 text-white">Auto Backup</h4>
-                    <p class="text-gray-400 leading-relaxed">
-                        Sistem backup otomatis untuk menjaga keamanan data server Anda.
+                        Tim support siap membantu Anda kapan saja jika bot mengalami kendala.
                     </p>
                 </div>
             </div>

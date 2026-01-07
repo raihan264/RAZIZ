@@ -21,10 +21,6 @@ if (!$selectedPlan) {
 }
 
 // Logic for Popular (consistency with index)
-// Assuming logic is same as index (e.g. if we fetched all we would know ranking)
-// For Detail, just hardcode false or fetch popularity logic if needed.
-// Let's assume passed via URL or just check price > threshold?
-// For demo, let's say ID 2 is popular.
 $selectedPlan['isPopular'] = ($selectedPlan['id'] == 2);
 
 // Get Settings for WhatsApp
@@ -285,7 +281,7 @@ $purchaseLink = $isLoggedIn ? $waUrl : "login.php?redirect=detail.php?id=" . $id
                                 Rp <?php echo number_format($selectedPlan['price'], 0, ',', '.'); ?>
                             </div>
                         </div>
-                        <p class="text-gray-400">Paket server gaming optimal untuk kebutuhan <?php echo strtolower(htmlspecialchars($selectedPlan['name'])); ?> dengan performa maksimal.</p>
+                        <p class="text-gray-400">Paket server bot optimal untuk kebutuhan <?php echo strtolower(htmlspecialchars($selectedPlan['name'])); ?> dengan performa maksimal.</p>
                     </div>
 
                     <div class="bg-green-900/10 border border-green-900/30 rounded-xl p-4 mb-6">
@@ -327,7 +323,7 @@ $purchaseLink = $isLoggedIn ? $waUrl : "login.php?redirect=detail.php?id=" . $id
                                     <p class="text-lg font-bold text-white"><?php echo htmlspecialchars($selectedPlan['cpu']); ?></p>
                                 </div>
                             </div>
-                            <p class="text-xs text-gray-400">Kecepatan tinggi untuk gaming smooth</p>
+                            <p class="text-xs text-gray-400">Kecepatan tinggi untuk bot smooth</p>
                         </div>
 
                         <div class="spec-card bg-gray-900/30 hover:bg-gray-900/50 rounded-xl p-4 border border-gray-800">
@@ -340,7 +336,7 @@ $purchaseLink = $isLoggedIn ? $waUrl : "login.php?redirect=detail.php?id=" . $id
                                     <p class="text-lg font-bold text-white"><?php echo htmlspecialchars($selectedPlan['ram']); ?></p>
                                 </div>
                             </div>
-                            <p class="text-xs text-gray-400">Kapasitas memori optimal untuk server gaming</p>
+                            <p class="text-xs text-gray-400">Kapasitas memori optimal untuk server bot</p>
                         </div>
 
                         <div class="spec-card bg-gray-900/30 hover:bg-gray-900/50 rounded-xl p-4 border border-gray-800">
@@ -384,7 +380,7 @@ $purchaseLink = $isLoggedIn ? $waUrl : "login.php?redirect=detail.php?id=" . $id
                             </div>
                             <div class="flex items-start gap-2 text-sm text-gray-300">
                                 <i data-lucide="zap" class="w-4 h-4 text-green-500 mt-0.5"></i>
-                                <span>Server menggunakan hardware performa tinggi untuk gaming</span>
+                                <span>Server menggunakan hardware performa tinggi untuk bot</span>
                             </div>
                             <div class="flex items-start gap-2 text-sm text-gray-300">
                                 <i data-lucide="clock" class="w-4 h-4 text-green-500 mt-0.5"></i>
@@ -425,7 +421,7 @@ $purchaseLink = $isLoggedIn ? $waUrl : "login.php?redirect=detail.php?id=" . $id
                 </div>
 
                 <p class="text-gray-500 text-sm text-center">
-                    &copy; 2024 RAZIZ PANEL. Hosting Server Gaming Terbaik.
+                    &copy; 2024 RAZIZ PANEL. Hosting Server Bot WhatsApp Terbaik.
                 </p>
 
                 <a href="index.php" class="text-green-400 hover:text-green-300 transition-colors text-sm font-medium">
