@@ -10,8 +10,24 @@ try {
     $plans = [];
 }
 
+// Fetch Settings for Footer
+$contactEmail = 'support@razizpanel.com';
+$contactWa = '081234567890';
+$contactAddress = 'Jakarta, Indonesia';
+
+try {
+    $stmt = $pdo->query("SELECT contact_email, contact_wa, contact_address FROM settings LIMIT 1");
+    $settings = $stmt->fetch();
+    if ($settings) {
+        if (!empty($settings['contact_email'])) $contactEmail = $settings['contact_email'];
+        if (!empty($settings['contact_wa'])) $contactWa = $settings['contact_wa'];
+        if (!empty($settings['contact_address'])) $contactAddress = $settings['contact_address'];
+    }
+} catch (PDOException $e) {
+    // Ignore error, use defaults
+}
+
 // Logic for Popular (e.g., middle tier or specific ID, here we pick the 2nd one or last one)
-// Let's mark the one with index 1 (2nd item) as popular if it exists
 foreach ($plans as $k => $v) {
     $plans[$k]['isPopular'] = ($k === 1);
     // Format price
@@ -375,15 +391,15 @@ foreach ($plans as $k => $v) {
                     <ul class="space-y-4">
                         <li class="flex items-start gap-3 text-gray-400">
                             <i data-lucide="mail" class="w-5 h-5 text-green-500 mt-1"></i>
-                            <span>support@razizpanel.com</span>
+                            <span><?php echo htmlspecialchars($contactEmail); ?></span>
                         </li>
                         <li class="flex items-start gap-3 text-gray-400">
                             <i data-lucide="phone" class="w-5 h-5 text-green-500 mt-1"></i>
-                            <span>+62 812 3456 7890</span>
+                            <span><?php echo htmlspecialchars($contactWa); ?></span>
                         </li>
                         <li class="flex items-start gap-3 text-gray-400">
                             <i data-lucide="map-pin" class="w-5 h-5 text-green-500 mt-1"></i>
-                            <span>Jakarta, Indonesia</span>
+                            <span><?php echo htmlspecialchars($contactAddress); ?></span>
                         </li>
                     </ul>
                 </div>
