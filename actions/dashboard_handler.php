@@ -8,15 +8,21 @@ $action = $_REQUEST['action'] ?? '';
 
 if ($action === 'get_stats') {
     try {
-        // 1. Weekly Revenue (This Week: Last 7 days)
-        $stmt = $pdo->query("SELECT SUM(CAST(amount AS INTEGER)) FROM orders WHERE status = 'Active' AND created_at >= date('now', '-7 days')");
+        // 1. Total Revenue (All Time, All Status) to match Orders Page
+        // User requested that "Orders" page is the source of truth.
+        $stmt = $pdo->query("SELECT SUM(CAST(amount AS INTEGER)) FROM orders");
+        $total_revenue = $stmt->fetchColumn() ?: 0;
+
+        // 2. Weekly Growth Calculation (Trend)
+        // This Week
+        $stmt = $pdo->query("SELECT SUM(CAST(amount AS INTEGER)) FROM orders WHERE created_at >= date('now', '-7 days')");
         $revenue_this_week = $stmt->fetchColumn() ?: 0;
 
-        // 2. Last Week Revenue (7-14 days ago) for Percentage Calculation
-        $stmt = $pdo->query("SELECT SUM(CAST(amount AS INTEGER)) FROM orders WHERE status = 'Active' AND created_at BETWEEN date('now', '-14 days') AND date('now', '-7 days')");
+        // Last Week
+        $stmt = $pdo->query("SELECT SUM(CAST(amount AS INTEGER)) FROM orders WHERE created_at BETWEEN date('now', '-14 days') AND date('now', '-7 days')");
         $revenue_last_week = $stmt->fetchColumn() ?: 0;
 
-        // 3. Active Servers (Count all in table)
+        // 3. Active Servers
         $stmt = $pdo->query("SELECT COUNT(*) FROM servers");
         $active_servers = $stmt->fetchColumn() ?: 0;
 
@@ -28,7 +34,7 @@ if ($action === 'get_stats') {
         $stmt = $pdo->query("SELECT COUNT(*) FROM products");
         $total_products = $stmt->fetchColumn() ?: 0;
 
-        // Calculate Percentage
+        // Calculate Trend Percentage
         $percentage = 0;
         if ($revenue_last_week > 0) {
             $percentage = (($revenue_this_week - $revenue_last_week) / $revenue_last_week) * 100;
@@ -39,11 +45,11 @@ if ($action === 'get_stats') {
         echo json_encode([
             'success' => true,
             'stats' => [
-                'revenue' => 'Rp ' . number_format($revenue_this_week, 0, ',', '.'), // Display Weekly Revenue
+                'revenue' => 'Rp ' . number_format($total_revenue, 0, ',', '.'), // Matches Orders Total
                 'servers' => $active_servers,
                 'users' => $total_users,
                 'products' => $total_products,
-                'percentage' => round($percentage, 1) . '%'
+                'percentage' => round($percentage, 1) . '%' // Weekly Growth Trend
             ]
         ]);
 
