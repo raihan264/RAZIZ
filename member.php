@@ -172,6 +172,31 @@ foreach ($servers as $srv) {
                     </div>
                 <?php endif; ?>
             </div>
+
+            <!-- SOURCE CODE SECTION (Only visible if servers > 0) -->
+            <?php if(!empty($jsServers)): ?>
+            <div class="pt-8 border-t border-gray-800">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2 mb-6 px-2">
+                    <i data-lucide="code" class="w-5 h-5 text-green-500"></i> Bonus Source Code
+                </h2>
+                <div class="bg-gray-900 border border-gray-800 rounded-3xl overflow-hidden shadow-xl">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-400">
+                            <thead class="bg-gray-950/50 text-gray-500 uppercase text-[10px] font-bold tracking-widest">
+                                <tr>
+                                    <th class="px-6 py-4">Nama File</th>
+                                    <th class="px-6 py-4">Tanggal Upload</th>
+                                    <th class="px-6 py-4 text-right">Download</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-800" id="sc-list-body">
+                                <tr><td colspan="3" class="px-6 py-5 text-center"><i class="animate-spin" data-lucide="loader"></i> Memuat SC...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
 
         <!-- SETTINGS VIEW -->
@@ -237,6 +262,9 @@ foreach ($servers as $srv) {
         // --- INIT ---
         document.addEventListener('DOMContentLoaded', () => {
             renderServers();
+            <?php if(!empty($jsServers)): ?>
+            loadSC();
+            <?php endif; ?>
             lucide.createIcons();
         });
 
@@ -415,6 +443,40 @@ foreach ($servers as $srv) {
         function logout() {
             fetch('actions/auth_handler.php?action=logout')
                 .then(() => window.location.href = 'login.php');
+        }
+
+        function loadSC() {
+            fetch('actions/sc_handler.php?action=list')
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('sc-list-body');
+                if(!tbody) return;
+
+                if (data.sc && data.sc.length > 0) {
+                    tbody.innerHTML = data.sc.map(item => `
+                        <tr class="hover:bg-gray-800/20 transition-colors">
+                            <td class="px-6 py-5 font-bold text-white flex items-center gap-3">
+                                <div class="p-2 bg-blue-500/10 rounded-lg"><i data-lucide="file-archive" class="w-4 h-4 text-blue-500"></i></div>
+                                ${item.name}
+                            </td>
+                            <td class="px-6 py-5 text-xs text-gray-400">${item.date}</td>
+                            <td class="px-6 py-5 text-right">
+                                <a href="actions/sc_handler.php?action=download&id=${item.id}" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-xs font-bold transition-all shadow-lg shadow-green-600/20">
+                                    <i data-lucide="download" class="w-3 h-3"></i> Unduh
+                                </a>
+                            </td>
+                        </tr>
+                    `).join('');
+                    lucide.createIcons();
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="3" class="px-6 py-5 text-center text-gray-500">Belum ada file source code.</td></tr>';
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                const tbody = document.getElementById('sc-list-body');
+                if(tbody) tbody.innerHTML = '<tr><td colspan="3" class="px-6 py-5 text-center text-red-500">Gagal memuat data.</td></tr>';
+            });
         }
 
     </script>

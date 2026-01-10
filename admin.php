@@ -272,6 +272,7 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
                 { id: 'orders', label: 'Pesanan', icon: 'shopping-cart' },
                 { id: 'users', label: 'Pelanggan', icon: 'users' },
                 { id: 'panel_users', label: 'User Panel', icon: 'user-check' },
+                { id: 'sc', label: 'Source Code', icon: 'code' },
                 { id: 'settings', label: 'Pengaturan', icon: 'settings', spacer: true }
             ];
 
@@ -330,6 +331,10 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
                 titleEl.textContent = 'User Panel Pterodactyl';
                 html = getPanelUsersHTML();
                 loadPanelUsers();
+            } else if (tab === 'sc') {
+                titleEl.textContent = 'Manajemen Source Code';
+                html = getSCHTML();
+                loadSC();
             } else if (tab === 'settings') {
                 titleEl.textContent = 'Pengaturan Toko';
                 html = getSettingsHTML();
@@ -379,6 +384,36 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
                                     <td class="px-6 py-4 text-right font-bold text-white">${o.amount}</td>
                                 </tr>
                                 `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function getSCHTML() {
+            return `
+            <div class="space-y-6 animate-fade-in">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-white">Source Code Manager</h2>
+                    <button onclick="openModal('sc', 'upload')" class="bg-green-600 hover:bg-green-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg active:scale-95 transition-all">
+                        <i data-lucide="upload" class="w-4 h-4"></i> Upload SC
+                    </button>
+                </div>
+
+                <div class="bg-gray-900 border border-gray-800 rounded-3xl overflow-hidden shadow-2xl">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-400">
+                            <thead class="bg-gray-950/50 text-gray-500 uppercase text-xs font-bold">
+                                <tr>
+                                    <th class="px-6 py-5">Nama SC</th>
+                                    <th class="px-6 py-5">Tanggal Upload</th>
+                                    <th class="px-6 py-5">Urutan</th>
+                                    <th class="px-6 py-5 text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-800" id="sc-tbody">
+                                <tr><td colspan="4" class="px-6 py-5 text-center"><i class="animate-spin" data-lucide="loader"></i> Memuat...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -805,6 +840,21 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
                     <div><label class="block text-sm text-gray-400 mb-2 font-medium">Password ${isAdd ? '' : '(Kosongkan jika tidak ubah)'}</label><input name="password" value="" ${isAdd ? 'required' : ''} type="text" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500" placeholder="Password"></div>
                 </div>
                 <div><label class="block text-sm text-gray-400 mb-2 font-medium">Nomor WhatsApp</label><input name="wa" value="${data.wa || ''}" required class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500" placeholder="08123xxxx"></div>`;
+            } else if (type === 'sc') {
+                if (mode === 'upload') {
+                    html = `
+                    <div><label class="block text-sm text-gray-400 mb-2 font-medium">Nama Source Code</label>
+                        <input name="name" required class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500" placeholder="Bot WA V3">
+                    </div>
+                    <div><label class="block text-sm text-gray-400 mb-2 font-medium">File ZIP</label>
+                        <input type="file" name="file" required accept=".zip" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-gray-300 outline-none focus:border-green-500">
+                    </div>`;
+                } else if (mode === 'order') {
+                    html = `
+                    <div><label class="block text-sm text-gray-400 mb-2 font-medium">Urutan (Angka)</label>
+                        <input name="order" value="${data.sort_order || 0}" type="number" required class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500">
+                    </div>`;
+                }
             }
 
             inputsContainer.innerHTML = html;
@@ -974,6 +1024,55 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
                         }
                     });
                 }
+            } else if (currentModalType === 'sc') {
+                if (currentModalMode === 'upload') {
+                    const submitBtn = document.getElementById('submit-btn');
+                    submitBtn.innerHTML = 'Uploading...';
+                    submitBtn.disabled = true;
+
+                    // FormData needed for files
+                    const fd = new FormData();
+                    fd.append('action', 'upload');
+                    fd.append('name', data.name);
+                    fd.append('file', document.querySelector('input[name="file"]').files[0]);
+
+                    fetch('actions/sc_handler.php', {
+                        method: 'POST',
+                        body: fd
+                    })
+                    .then(res => res.json())
+                    .then(result => {
+                        submitBtn.innerHTML = 'Simpan';
+                        submitBtn.disabled = false;
+                        if(result.success) {
+                            alert('Upload Berhasil');
+                            loadSC();
+                            closeModal();
+                        } else {
+                            alert(result.message);
+                        }
+                    });
+                } else if (currentModalMode === 'order') {
+                    const requestData = new URLSearchParams();
+                    requestData.append('action', 'reorder');
+                    requestData.append('id', currentEditId);
+                    requestData.append('order', data.order);
+
+                    fetch('actions/sc_handler.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: requestData
+                    })
+                    .then(res => res.json())
+                    .then(result => {
+                        if(result.success) {
+                            loadSC();
+                            closeModal();
+                        } else {
+                            alert(result.message);
+                        }
+                    });
+                }
             }
         }
 
@@ -1064,6 +1163,40 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
                     }
                 })
                 .catch(err => console.error(err));
+        }
+
+        function loadSC() {
+            fetch('actions/sc_handler.php?action=list')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const tbody = document.getElementById('sc-tbody');
+                        if (!tbody) return;
+
+                        if (data.sc.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-5 text-center text-gray-500">Belum ada file.</td></tr>';
+                            return;
+                        }
+
+                        tbody.innerHTML = data.sc.map(item => `
+                            <tr class="hover:bg-gray-800/20 transition-colors">
+                                <td class="px-6 py-5 font-bold text-white flex items-center gap-3">
+                                    <div class="p-2 bg-blue-500/10 rounded-lg"><i data-lucide="file-archive" class="w-4 h-4 text-blue-500"></i></div>
+                                    ${item.name}
+                                </td>
+                                <td class="px-6 py-5 text-xs text-gray-400">${item.date}</td>
+                                <td class="px-6 py-5 text-sm text-white font-mono">${item.sort_order}</td>
+                                <td class="px-6 py-5">
+                                    <div class="flex justify-end gap-2">
+                                        <button onclick='openModal("sc", "order", ${JSON.stringify(item)})' class="p-2.5 bg-gray-800 hover:bg-green-600/20 text-gray-400 hover:text-green-500 rounded-xl transition-all"><i data-lucide="arrow-up-down" class="w-4 h-4"></i></button>
+                                        <button onclick="deleteItem('sc', ${item.id})" class="p-2.5 bg-gray-800 hover:bg-red-500/20 text-gray-400 hover:text-red-500 rounded-xl transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('');
+                        lucide.createIcons();
+                    }
+                });
         }
 
         function deleteItem(type, id) {
@@ -1172,6 +1305,20 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
                     console.error(err);
                     alert('Terjadi kesalahan koneksi.');
                     btn.innerHTML = originalContent;
+                });
+            } else if (type === 'sc') {
+                fetch('actions/sc_handler.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ action: 'delete', id: id })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.success) {
+                        loadSC();
+                    } else {
+                        alert(data.message);
+                    }
                 });
             }
         }

@@ -1,0 +1,198 @@
+<?php
+// actions/sc_handler.php
+session_start();
+require_once __DIR__ . '/../config/database.php';
+
+// Allow read actions without strict admin login (e.g. for members)
+// But 'upload', 'delete', 'reorder' require admin login
+$isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'];
+$isMember = isset($_SESSION['user_logged_in']) && $_SESSION['user_logged_in'];
+
+$action = $_REQUEST['action'] ?? '';
+
+header('Content-Type: application/json');
+
+if ($action === 'upload') {
+    if (!$isAdmin) {
+        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        exit;
+    }
+
+    $name = $_POST['name'] ?? '';
+    if (empty($name) || !isset($_FILES['file'])) {
+        echo json_encode(['success' => false, 'message' => 'Nama dan File wajib diisi']);
+        exit;
+    }
+
+    $file = $_FILES['file'];
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
+    if ($ext !== 'zip') {
+        echo json_encode(['success' => false, 'message' => 'Hanya file ZIP yang diperbolehkan']);
+        exit;
+    }
+
+    $uploadDir = __DIR__ . '/../uploads/sc/';
+    if (!file_exists($uploadDir)) {
+        mkdir($uploadDir, 0777, true);
+    }
+
+    // Generate unique filename
+    $filename = uniqid('sc_') . '_' . time() . '.zip';
+    $targetPath = $uploadDir . $filename;
+
+    if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+        try {
+            // Get max sort order
+            $stmt = $pdo->query("SELECT MAX(sort_order) FROM source_codes");
+            $maxOrder = $stmt->fetchColumn() ?: 0;
+            $newOrder = $maxOrder + 1;
+
+            $stmt = $pdo->prepare("INSERT INTO source_codes (name, file_path, sort_order) VALUES (?, ?, ?)");
+            $stmt->execute([$name, $filename, $newOrder]);
+
+            echo json_encode(['success' => true, 'message' => 'Upload berhasil']);
+        } catch (PDOException $e) {
+            // Delete file if DB insert fails
+            unlink($targetPath);
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Gagal mengupload file']);
+    }
+
+} elseif ($action === 'delete') {
+    if (!$isAdmin) {
+        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        exit;
+    }
+
+    $id = $_POST['id'] ?? '';
+    if (empty($id)) {
+        echo json_encode(['success' => false, 'message' => 'ID diperlukan']);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT file_path FROM source_codes WHERE id = ?");
+        $stmt->execute([$id]);
+        $file = $stmt->fetchColumn();
+
+        if ($file) {
+            $filePath = __DIR__ . '/../uploads/sc/' . $file;
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
+            $pdo->prepare("DELETE FROM source_codes WHERE id = ?")->execute([$id]);
+            echo json_encode(['success' => true, 'message' => 'File dihapus']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'File tidak ditemukan']);
+        }
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+
+} elseif ($action === 'reorder') {
+    if (!$isAdmin) {
+        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        exit;
+    }
+
+    $id = $_POST['id'] ?? '';
+    $order = $_POST['order'] ?? '';
+
+    if (empty($id) || !is_numeric($order)) {
+        echo json_encode(['success' => false, 'message' => 'ID dan Urutan diperlukan']);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("UPDATE source_codes SET sort_order = ? WHERE id = ?");
+        $stmt->execute([$order, $id]);
+        echo json_encode(['success' => true, 'message' => 'Urutan diperbarui']);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+
+} elseif ($action === 'list') {
+    // Both admin and member can list, but member might have restrictions logic handled in frontend or here?
+    // User requested: "Sc akan muncul jika memiliki minimal 1 server aktif"
+    // Ideally we check server count here if it's a member request to be secure.
+
+    if (!$isAdmin && !$isMember) {
+        echo json_encode(['success' => false, 'message' => 'Login required']);
+        exit;
+    }
+
+    if ($isMember && !$isAdmin) {
+        // Check active servers
+        $userId = $_SESSION['user_id'];
+        $stmt = $pdo->prepare("SELECT activeServers FROM customers WHERE id = ?");
+        $stmt->execute([$userId]);
+        $activeServers = $stmt->fetchColumn() ?: 0;
+
+        if ($activeServers < 1) {
+            echo json_encode(['success' => true, 'sc' => [], 'message' => 'Need active server']);
+            exit;
+        }
+    }
+
+    try {
+        $stmt = $pdo->query("SELECT id, name, sort_order, created_at FROM source_codes ORDER BY sort_order ASC, created_at DESC");
+        $sc = $stmt->fetchAll();
+
+        // Format date
+        foreach ($sc as &$item) {
+            $item['date'] = date('d M Y', strtotime($item['created_at']));
+        }
+
+        echo json_encode(['success' => true, 'sc' => $sc]);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+
+} elseif ($action === 'download') {
+    // Download File
+    // Check perm
+    if (!$isAdmin && !$isMember) {
+        die('Access Denied');
+    }
+
+    $id = $_GET['id'] ?? '';
+    if (empty($id)) die('Invalid ID');
+
+    // If member, check active servers again to prevent direct link abuse
+    if ($isMember && !$isAdmin) {
+        $userId = $_SESSION['user_id'];
+        $stmt = $pdo->prepare("SELECT activeServers FROM customers WHERE id = ?");
+        $stmt->execute([$userId]);
+        $activeServers = $stmt->fetchColumn() ?: 0;
+        if ($activeServers < 1) die('Active server required to download');
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT name, file_path FROM source_codes WHERE id = ?");
+        $stmt->execute([$id]);
+        $sc = $stmt->fetch();
+
+        if ($sc) {
+            $filePath = __DIR__ . '/../uploads/sc/' . $sc['file_path'];
+            if (file_exists($filePath)) {
+                header('Content-Type: application/zip');
+                header('Content-Disposition: attachment; filename="' . basename($sc['name']) . '.zip"');
+                header('Content-Length: ' . filesize($filePath));
+                readfile($filePath);
+                exit;
+            } else {
+                die('File missing on server');
+            }
+        } else {
+            die('SC Not Found');
+        }
+    } catch (PDOException $e) {
+        die($e->getMessage());
+    }
+
+} else {
+    echo json_encode(['success' => false, 'message' => 'Invalid action']);
+}

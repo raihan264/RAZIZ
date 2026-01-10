@@ -39,8 +39,6 @@ try {
     ");
 
     // Auto-create table customers jika belum ada
-    // Note: Schema changed to remove 'name' but we keep it for backward compat if table exists.
-    // New installs won't have 'name'.
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS customers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -109,6 +107,17 @@ try {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL UNIQUE,
             password TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+
+    // Auto-create table source_codes (New Feature)
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS source_codes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            sort_order INTEGER DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ");
