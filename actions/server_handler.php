@@ -45,7 +45,8 @@ if ($action === 'get_all') {
                 'raw_id' => $svr['id'],
                 'owner' => $svr['owner_name'],
                 'plan' => $svr['plan_name'],
-                'date' => $createdAt->format('d M Y'),
+                'date' => $createdAt->format('Y-m-d'), // Use Y-m-d for date input compatibility
+                'display_date' => $createdAt->format('d M Y'),
                 'status' => $status,
                 'identifier' => $svr['identifier']
             ];
@@ -176,6 +177,30 @@ if ($action === 'get_all') {
         error_log($e->getMessage());
         echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
+} elseif ($action === 'edit_date') {
+    $id = $_POST['id'] ?? '';
+    $new_date = $_POST['date'] ?? '';
+
+    // Expected ID: "SVR-1" -> "1"
+    $dbId = str_replace('SVR-', '', $id);
+
+    if (empty($dbId) || empty($new_date)) {
+        echo json_encode(['success' => false, 'message' => 'ID dan Tanggal diperlukan']);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("UPDATE servers SET created_at = ? WHERE id = ?");
+        // Ensure format is Y-m-d H:i:s or compatible with SQLite logic
+        // User sends Y-m-d, append time to keep it valid datetime
+        $fullDate = $new_date . ' ' . date('H:i:s');
+        $stmt->execute([$fullDate, $dbId]);
+
+        echo json_encode(['success' => true, 'message' => 'Tanggal pembuatan berhasil diubah']);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+
 } elseif ($action === 'delete') {
     $id = $_POST['id'] ?? '';
 

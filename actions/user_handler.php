@@ -58,24 +58,41 @@ if ($action === 'get_all') {
     $password = $_POST['password'] ?? '';
     $wa = $_POST['wa'] ?? '';
 
-    if (empty($id) || empty($username) || empty($password)) {
-        echo json_encode(['success' => false, 'message' => 'Data tidak lengkap']);
+    if (empty($id)) {
+        echo json_encode(['success' => false, 'message' => 'ID tidak valid']);
         exit;
     }
 
     try {
-        // Check duplicate username if changed
-        $stmt = $pdo->prepare("SELECT id FROM customers WHERE username = ? AND id != ?");
-        $stmt->execute([$username, $id]);
-        if ($stmt->fetch()) {
-            echo json_encode(['success' => false, 'message' => 'Username sudah digunakan orang lain']);
+        // Get existing data first to handle partial updates
+        $stmt = $pdo->prepare("SELECT * FROM customers WHERE id = ?");
+        $stmt->execute([$id]);
+        $existing = $stmt->fetch();
+
+        if (!$existing) {
+            echo json_encode(['success' => false, 'message' => 'User tidak ditemukan']);
             exit;
+        }
+
+        // Use existing values if new ones are empty
+        $newUsername = !empty($username) ? $username : $existing['username'];
+        $newPassword = !empty($password) ? $password : $existing['password'];
+        $newWa = !empty($wa) ? $wa : $existing['wa'];
+
+        // Check duplicate username if changed
+        if ($newUsername !== $existing['username']) {
+            $stmt = $pdo->prepare("SELECT id FROM customers WHERE username = ? AND id != ?");
+            $stmt->execute([$newUsername, $id]);
+            if ($stmt->fetch()) {
+                echo json_encode(['success' => false, 'message' => 'Username sudah digunakan orang lain']);
+                exit;
+            }
         }
 
         // Use username as name
         $sql = "UPDATE customers SET name = ?, username = ?, password = ?, wa = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([$username, $username, $password, $wa, $id]);
+        $stmt->execute([$newUsername, $newUsername, $newPassword, $newWa, $id]);
 
         echo json_encode(['success' => true, 'message' => 'Data pelanggan diperbarui']);
     } catch (PDOException $e) {

@@ -416,7 +416,7 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
                                     <td class="px-6 py-5 font-mono text-xs text-gray-500 uppercase">${s.id}</td>
                                     <td class="px-6 py-5 font-bold text-white">${s.owner}</td>
                                     <td class="px-6 py-5 text-xs">${s.plan}</td>
-                                    <td class="px-6 py-5 text-xs text-gray-400 font-medium">${s.date}</td>
+                                    <td class="px-6 py-5 text-xs text-gray-400 font-medium">${s.display_date || s.date}</td>
                                     <td class="px-6 py-5">
                                         <span class="px-2 py-1 rounded-full text-[10px] font-bold bg-green-500/10 text-green-500 border border-green-500/20">
                                             ${s.status}
@@ -424,7 +424,8 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
                                     </td>
                                     <td class="px-6 py-5">
                                         <div class="flex justify-end gap-2">
-                                            <button onclick='deleteItem("server", "${s.id}")' class="p-2.5 bg-gray-800 hover:bg-red-500/20 text-gray-400 hover:text-red-500 rounded-xl transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                            <button onclick='openModal("server", "edit_date", ${JSON.stringify(s)})' class="p-2.5 bg-gray-800 hover:bg-green-600/20 text-gray-400 hover:text-green-500 rounded-xl transition-all" title="Edit Tanggal"><i data-lucide="calendar" class="w-4 h-4"></i></button>
+                                            <button onclick='deleteItem("server", "${s.id}")' class="p-2.5 bg-gray-800 hover:bg-red-500/20 text-gray-400 hover:text-red-500 rounded-xl transition-all" title="Hapus"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                                         </div>
                                     </td>
                                 </tr>
@@ -733,6 +734,7 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
 
             modal.classList.remove('hidden');
             title.textContent = `${mode === 'add' ? 'Tambah' : 'Edit'} ${type === 'product' ? 'Produk' : type === 'order' ? 'Pesanan' : type === 'server' ? 'Server' : 'Pelanggan'}`;
+            if (type === 'server' && mode === 'edit_date') title.textContent = 'Edit Tanggal Server';
             submitText.textContent = type === 'server' && mode === 'add' ? 'Buat User & Server Panel' : 'Simpan';
 
             let html = '';
@@ -750,41 +752,57 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
                 </div>
                 <div><label class="block text-sm text-gray-400 mb-2 font-medium">Harga (Rp)</label><input name="price" value="${data.price || ''}" required class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500" placeholder="8.000"></div>`;
             } else if (type === 'server') {
-                const userOptions = customers.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-                const planOptions = products.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+                if (mode === 'add') {
+                    const userOptions = customers.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+                    const planOptions = products.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
 
-                // Added Server Name field here
-                html = `
-                <div class="bg-green-500/5 border border-green-500/20 p-4 rounded-xl mb-4 text-center">
-                    <p class="text-green-500 text-xs font-bold uppercase tracking-widest">Otomatisasi Pterodactyl</p>
-                    <p class="text-gray-400 text-[10px] mt-1 italic">Node default dari pengaturan sistem akan digunakan.</p>
-                </div>
-                <div><label class="block text-sm text-gray-400 mb-2 font-medium">Nama Server</label>
-                    <input name="server_name" required class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500" placeholder="My Server">
-                </div>
-                <div><label class="block text-sm text-gray-400 mb-2 font-medium">Pilih Pelanggan</label>
-                    <select name="owner" required class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500 appearance-none">${userOptions}</select>
-                </div>
-                <div><label class="block text-sm text-gray-400 mb-2 font-medium">Pilih Paket</label>
-                    <select name="plan" required class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500 appearance-none">${planOptions}</select>
-                </div>`;
+                    html = `
+                    <div class="bg-green-500/5 border border-green-500/20 p-4 rounded-xl mb-4 text-center">
+                        <p class="text-green-500 text-xs font-bold uppercase tracking-widest">Otomatisasi Pterodactyl</p>
+                        <p class="text-gray-400 text-[10px] mt-1 italic">Node default dari pengaturan sistem akan digunakan.</p>
+                    </div>
+                    <div><label class="block text-sm text-gray-400 mb-2 font-medium">Nama Server</label>
+                        <input name="server_name" required class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500" placeholder="My Server">
+                    </div>
+                    <div><label class="block text-sm text-gray-400 mb-2 font-medium">Pilih Pelanggan</label>
+                        <select name="owner" required class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500 appearance-none">${userOptions}</select>
+                    </div>
+                    <div><label class="block text-sm text-gray-400 mb-2 font-medium">Pilih Paket</label>
+                        <select name="plan" required class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500 appearance-none">${planOptions}</select>
+                    </div>`;
+                } else if (mode === 'edit_date') {
+                    html = `
+                    <div><label class="block text-sm text-gray-400 mb-2 font-medium">Tanggal Pembuatan (YYYY-MM-DD)</label>
+                        <input type="date" name="date" value="${data.date || ''}" required class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500">
+                    </div>`;
+                }
             } else if (type === 'order') {
-                const userOptions = customers.map(c => `<option value="${c.name}" ${data.user === c.name ? 'selected' : ''}>${c.name}</option>`).join('');
-                const planOptions = products.map(p => `<option value="${p.name}" ${data.plan === p.name ? 'selected' : ''}>${p.name}</option>`).join('');
+                if (mode === 'edit') {
+                    html = `
+                    <div><label class="block text-sm text-gray-400 mb-2 font-medium">Status</label><select name="status" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500">
+                        <option value="Active" ${data.status === 'Active' ? 'selected' : ''}>Active</option>
+                        <option value="Expired" ${data.status === 'Expired' ? 'selected' : ''}>Expired</option>
+                    </select></div>
+                    <div><label class="block text-sm text-gray-400 mb-2 font-medium">Total (Rp)</label><input name="amount" value="${data.raw_amount || data.amount.replace(/[^0-9]/g, '')}" required class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500" placeholder="8000"></div>`;
+                } else {
+                    const userOptions = customers.map(c => `<option value="${c.name}" ${data.user === c.name ? 'selected' : ''}>${c.name}</option>`).join('');
+                    const planOptions = products.map(p => `<option value="${p.name}" ${data.plan === p.name ? 'selected' : ''}>${p.name}</option>`).join('');
 
-                html = `
-                <div><label class="block text-sm text-gray-400 mb-2 font-medium">Pelanggan</label><select name="user" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500">${userOptions}</select></div>
-                <div><label class="block text-sm text-gray-400 mb-2 font-medium">Paket</label><select name="plan" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500">${planOptions}</select></div>
-                <div><label class="block text-sm text-gray-400 mb-2 font-medium">Total (Rp)</label><input name="amount" value="${data.amount || ''}" required class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500" placeholder="Rp 8.000"></div>
-                <div><label class="block text-sm text-gray-400 mb-2 font-medium">Status</label><select name="status" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500">
-                    <option value="Active" ${data.status === 'Active' ? 'selected' : ''}>Active</option>
-                    <option value="Expired" ${data.status === 'Expired' ? 'selected' : ''}>Expired</option>
-                </select></div>`;
+                    html = `
+                    <div><label class="block text-sm text-gray-400 mb-2 font-medium">Pelanggan</label><select name="user" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500">${userOptions}</select></div>
+                    <div><label class="block text-sm text-gray-400 mb-2 font-medium">Paket</label><select name="plan" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500">${planOptions}</select></div>
+                    <div><label class="block text-sm text-gray-400 mb-2 font-medium">Total (Rp)</label><input name="amount" value="${data.amount || ''}" required class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500" placeholder="Rp 8.000"></div>
+                    <div><label class="block text-sm text-gray-400 mb-2 font-medium">Status</label><select name="status" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500">
+                        <option value="Active" ${data.status === 'Active' ? 'selected' : ''}>Active</option>
+                        <option value="Expired" ${data.status === 'Expired' ? 'selected' : ''}>Expired</option>
+                    </select></div>`;
+                }
             } else if (type === 'user') {
+                const isAdd = mode === 'add';
                 html = `
                 <div class="grid grid-cols-2 gap-4">
                     <div><label class="block text-sm text-gray-400 mb-2 font-medium">Username</label><input name="username" value="${data.username || ''}" required class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500" placeholder="Username"></div>
-                    <div><label class="block text-sm text-gray-400 mb-2 font-medium">Password</label><input name="password" value="${data.password || ''}" required type="text" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500" placeholder="Password"></div>
+                    <div><label class="block text-sm text-gray-400 mb-2 font-medium">Password ${isAdd ? '' : '(Kosongkan jika tidak ubah)'}</label><input name="password" value="" ${isAdd ? 'required' : ''} type="text" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500" placeholder="Password"></div>
                 </div>
                 <div><label class="block text-sm text-gray-400 mb-2 font-medium">Nomor WhatsApp</label><input name="wa" value="${data.wa || ''}" required class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500" placeholder="08123xxxx"></div>`;
             }
@@ -856,7 +874,7 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
                 .then(response => response.json())
                 .then(result => {
                     if (result.success) {
-                        alert('Server berhasil dibuat!');
+                        alert('User berhasil disimpan!');
                         loadInitialData(); // Reload users from DB
                         closeModal();
                     } else {
@@ -868,13 +886,34 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
                     alert('Terjadi kesalahan saat menyimpan user');
                 });
             } else if (currentModalType === 'order') {
-                if (currentModalMode === 'add') {
+                if (currentModalMode === 'edit') {
+                    const requestData = new URLSearchParams();
+                    requestData.append('action', 'edit');
+                    requestData.append('id', currentEditId);
+                    requestData.append('amount', data.amount);
+                    requestData.append('status', data.status);
+
+                    fetch('actions/order_handler.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: requestData
+                    })
+                    .then(res => res.json())
+                    .then(result => {
+                        if(result.success) {
+                            loadOrders();
+                            closeModal();
+                        } else {
+                            alert(result.message);
+                        }
+                    });
+                } else if (currentModalMode === 'add') {
+                    // Logic for manual order add (if needed, but usually automated)
+                    // ... existing mock logic or implement real add
                     orders.unshift({ id: `#ORD-${Math.floor(Math.random()*1000)}`, ...data, date: 'Baru saja' });
-                } else {
-                    orders = orders.map(o => o.id === currentEditId ? { ...o, ...data } : o);
+                    closeModal();
+                    renderView(currentTab);
                 }
-                closeModal();
-                renderView(currentTab);
             } else if (currentModalType === 'server') {
                 if (currentModalMode === 'add') {
                     const submitBtn = document.getElementById('submit-btn');
@@ -913,6 +952,27 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
                         submitBtn.innerHTML = originalBtnText;
                         alert('Terjadi kesalahan koneksi.');
                     });
+                } else if (currentModalMode === 'edit_date') {
+                    const requestData = new URLSearchParams();
+                    requestData.append('action', 'edit_date');
+                    requestData.append('id', currentEditId);
+                    requestData.append('date', data.date);
+
+                    fetch('actions/server_handler.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: requestData
+                    })
+                    .then(res => res.json())
+                    .then(result => {
+                        if(result.success) {
+                            alert('Tanggal berhasil diubah');
+                            loadInitialData();
+                            closeModal();
+                        } else {
+                            alert('Gagal: ' + result.message);
+                        }
+                    });
                 }
             }
         }
@@ -944,6 +1004,7 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
                                 <td class="px-6 py-5 font-bold text-white">${o.amount}</td>
                                 <td class="px-6 py-5">
                                     <div class="flex justify-end gap-2">
+                                        <button onclick='openModal("order", "edit", ${JSON.stringify(o)})' class="p-2 bg-gray-800 hover:bg-green-600/20 text-gray-400 hover:text-green-500 rounded-lg mr-2"><i data-lucide="edit" class="w-4 h-4"></i></button>
                                         <button onclick="deleteItem('order', '${o.id}')" class="p-2 bg-gray-800 hover:bg-red-500/20 text-gray-400 hover:text-red-500 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                                     </div>
                                 </td>

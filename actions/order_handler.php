@@ -53,6 +53,30 @@ if ($action === 'get_all') {
         echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
 
+} elseif ($action === 'edit') {
+    header('Content-Type: application/json');
+    $id = $_POST['id'] ?? '';
+    $amount = $_POST['amount'] ?? '';
+    $status = $_POST['status'] ?? '';
+
+    // Expected id format "#ORD-XX" or just "XX"
+    $dbId = str_replace('#ORD-', '', $id);
+
+    if (empty($dbId) || empty($amount) || empty($status)) {
+        echo json_encode(['success' => false, 'message' => 'ID, Status, dan Amount harus diisi']);
+        exit;
+    }
+
+    try {
+        // Sanitize Amount
+        $amount = preg_replace('/[^0-9]/', '', $amount);
+
+        $pdo->prepare("UPDATE orders SET amount = ?, status = ? WHERE id = ?")->execute([$amount, $status, $dbId]);
+        echo json_encode(['success' => true, 'message' => 'Pesanan berhasil diperbarui']);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+
 } elseif ($action === 'delete') {
     header('Content-Type: application/json');
     $id = $_POST['id'] ?? '';
