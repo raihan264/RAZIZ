@@ -1,6 +1,13 @@
 <?php
 // actions/sc_handler.php
-session_start();
+// Suppress output to ensure clean JSON
+error_reporting(E_ALL & ~E_NOTICE);
+ini_set('display_errors', 0);
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 require_once __DIR__ . '/../config/database.php';
 
 // Allow read actions without strict admin login (e.g. for members)
@@ -10,6 +17,8 @@ $isMember = isset($_SESSION['user_logged_in']) && $_SESSION['user_logged_in'];
 
 $action = $_REQUEST['action'] ?? '';
 
+// Ensure no content before this
+ob_clean();
 header('Content-Type: application/json');
 
 if ($action === 'upload') {
@@ -54,7 +63,7 @@ if ($action === 'upload') {
             echo json_encode(['success' => true, 'message' => 'Upload berhasil']);
         } catch (PDOException $e) {
             // Delete file if DB insert fails
-            unlink($targetPath);
+            if (file_exists($targetPath)) unlink($targetPath);
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
     } else {
@@ -115,10 +124,6 @@ if ($action === 'upload') {
     }
 
 } elseif ($action === 'list') {
-    // Both admin and member can list, but member might have restrictions logic handled in frontend or here?
-    // User requested: "Sc akan muncul jika memiliki minimal 1 server aktif"
-    // Ideally we check server count here if it's a member request to be secure.
-
     if (!$isAdmin && !$isMember) {
         echo json_encode(['success' => false, 'message' => 'Login required']);
         exit;
@@ -126,7 +131,7 @@ if ($action === 'upload') {
 
     if ($isMember && !$isAdmin) {
         // Check active servers
-        $userId = $_SESSION['user_id'];
+        $userId = $_SESSION['user_id'] ?? 0;
         $stmt = $pdo->prepare("SELECT activeServers FROM customers WHERE id = ?");
         $stmt->execute([$userId]);
         $activeServers = $stmt->fetchColumn() ?: 0;
@@ -152,7 +157,6 @@ if ($action === 'upload') {
     }
 
 } elseif ($action === 'download') {
-    // Download File
     // Check perm
     if (!$isAdmin && !$isMember) {
         die('Access Denied');
@@ -163,7 +167,7 @@ if ($action === 'upload') {
 
     // If member, check active servers again to prevent direct link abuse
     if ($isMember && !$isAdmin) {
-        $userId = $_SESSION['user_id'];
+        $userId = $_SESSION['user_id'] ?? 0;
         $stmt = $pdo->prepare("SELECT activeServers FROM customers WHERE id = ?");
         $stmt->execute([$userId]);
         $activeServers = $stmt->fetchColumn() ?: 0;
@@ -178,6 +182,8 @@ if ($action === 'upload') {
         if ($sc) {
             $filePath = __DIR__ . '/../uploads/sc/' . $sc['file_path'];
             if (file_exists($filePath)) {
+                // Clear buffer before file output
+                ob_clean();
                 header('Content-Type: application/zip');
                 header('Content-Disposition: attachment; filename="' . basename($sc['name']) . '.zip"');
                 header('Content-Length: ' . filesize($filePath));
