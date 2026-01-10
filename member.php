@@ -29,6 +29,19 @@ $servers = $stmt->fetchAll();
 // Prepare Servers for JS
 $jsServers = [];
 foreach ($servers as $srv) {
+    // Dynamic Status Logic matching Admin
+    $createdAt = new DateTime($srv['created_at']);
+    $now = new DateTime();
+    $diff = $now->diff($createdAt)->days;
+
+    $status = 'Active';
+    if ($diff > 30) {
+        $status = 'Expired';
+    } elseif ($diff > 15) {
+        $status = 'No Garansi';
+    }
+    // Override if DB says Expired manually? Usually dynamic logic takes precedence for display
+
     $jsServers[] = [
         'id' => "SVR-" . $srv['id'],
         'name' => $srv['plan_name'],
@@ -37,7 +50,7 @@ foreach ($servers as $srv) {
         // Logic for warranty/expiry dates (simplified)
         'active_until' => date('Y-m-d', strtotime($srv['created_at'] . ' +30 days')),
         'warranty_until' => date('Y-m-d', strtotime($srv['created_at'] . ' +15 days')),
-        'status' => $srv['status']
+        'status' => $status
     ];
 }
 ?>

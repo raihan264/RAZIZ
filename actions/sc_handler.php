@@ -11,7 +11,6 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../config/database.php';
 
 // Allow read actions without strict admin login (e.g. for members)
-// But 'upload', 'delete', 'reorder' require admin login
 $isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'];
 $isMember = isset($_SESSION['user_logged_in']) && $_SESSION['user_logged_in'];
 
@@ -43,7 +42,10 @@ if ($action === 'upload') {
 
     $uploadDir = __DIR__ . '/../uploads/sc/';
     if (!file_exists($uploadDir)) {
-        mkdir($uploadDir, 0777, true);
+        if (!mkdir($uploadDir, 0777, true)) {
+            echo json_encode(['success' => false, 'message' => 'Gagal membuat folder upload']);
+            exit;
+        }
     }
 
     // Generate unique filename
@@ -67,7 +69,7 @@ if ($action === 'upload') {
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
     } else {
-        echo json_encode(['success' => false, 'message' => 'Gagal mengupload file']);
+        echo json_encode(['success' => false, 'message' => 'Gagal mengupload file (move_uploaded_file error). Cek permission folder.']);
     }
 
 } elseif ($action === 'delete') {
@@ -130,9 +132,17 @@ if ($action === 'upload') {
     }
 
     if ($isMember && !$isAdmin) {
-        // Check active servers
-        $userId = $_SESSION['user_id'] ?? 0;
-        $stmt = $pdo->prepare("SELECT activeServers FROM customers WHERE id = ?");
+        // Fix: Use $_SESSION['user']['id'] not $_SESSION['user_id']
+        $userId = $_SESSION['user']['id'] ?? 0;
+
+        // Count active servers dynamically (Source of Truth)
+        // We check for 'Active' status specifically as requested by logic (usually < 30 days)
+        // Or just any server? Prompt said "memiliki minimal 1 server aktif" (have at least 1 active server).
+        // Since we have dynamic status logic, relying on DB status 'Active' is safer if the cron updates it.
+        // But for now, let's count all non-expired servers or just servers in the table that aren't deleted?
+        // Let's count servers where status != 'Expired' to be safe, or just count all if 'Active' means 'Exists'.
+        // To be strict with "Active":
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM servers WHERE user_id = ? AND status = 'Active'");
         $stmt->execute([$userId]);
         $activeServers = $stmt->fetchColumn() ?: 0;
 
@@ -167,10 +177,13 @@ if ($action === 'upload') {
 
     // If member, check active servers again to prevent direct link abuse
     if ($isMember && !$isAdmin) {
-        $userId = $_SESSION['user_id'] ?? 0;
-        $stmt = $pdo->prepare("SELECT activeServers FROM customers WHERE id = ?");
+        $userId = $_SESSION['user']['id'] ?? 0;
+
+        // Check real count primarily
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM servers WHERE user_id = ? AND status = 'Active'");
         $stmt->execute([$userId]);
         $activeServers = $stmt->fetchColumn() ?: 0;
+
         if ($activeServers < 1) die('Active server required to download');
     }
 

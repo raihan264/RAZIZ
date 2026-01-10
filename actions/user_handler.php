@@ -43,7 +43,7 @@ if ($action === 'get_all') {
 
         $joinDate = date('d M Y');
         // Use username as name to satisfy potential DB constraints
-        $sql = "INSERT INTO customers (name, username, password, wa, joinDate, activeServers) VALUES (?, ?, ?, ?, ?, 0)";
+        $sql = "INSERT INTO customers (name, username, password, wa, joinDate) VALUES (?, ?, ?, ?, ?)";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$username, $username, $password, $wa, $joinDate]);
 

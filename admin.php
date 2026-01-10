@@ -1196,6 +1196,11 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
                         `).join('');
                         lucide.createIcons();
                     }
+                })
+                .catch(err => {
+                    console.error(err);
+                    const tbody = document.getElementById('sc-tbody');
+                    if(tbody) tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-5 text-center text-red-500">Gagal memuat data.</td></tr>';
                 });
         }
 

@@ -168,9 +168,6 @@ if ($action === 'get_all') {
             $product['price']
         ]);
 
-        // Update customer active servers count
-        $pdo->prepare("UPDATE customers SET activeServers = activeServers + 1 WHERE id = ?")->execute([$customer['id']]);
-
         echo json_encode(['success' => true, 'message' => 'Server created successfully']);
 
     } catch (Exception $e) {
@@ -236,9 +233,6 @@ if ($action === 'get_all') {
 
             // Set Order Expired
             $pdo->prepare("UPDATE orders SET status = 'Expired' WHERE server_id = ?")->execute([$id]);
-
-            // Decrement active servers count
-            $pdo->prepare("UPDATE customers SET activeServers = MAX(0, activeServers - 1) WHERE id = ?")->execute([$server['user_id']]);
 
             echo json_encode(['success' => true, 'message' => 'Server berhasil dihapus']);
         } else {
